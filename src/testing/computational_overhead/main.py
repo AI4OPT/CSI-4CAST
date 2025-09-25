@@ -19,7 +19,6 @@ LIST_SCENARIOS = ["TDD", "FDD"]
 if __name__ == "__main__":
     import gc
     import json
-    from datetime import datetime
     from pathlib import Path
 
     import numpy as np
@@ -29,8 +28,9 @@ if __name__ == "__main__":
     from src.testing.get_models import get_eval_model
     from src.utils.dirs import DIR_OUTPUTS
     from src.utils.main_utils import make_logger
+    from src.utils.time_utils import get_current_time
 
-    dir_output = Path(DIR_OUTPUTS) / "testing" / "computational_overhead" / datetime.now().strftime("%Y%m%d-%H%M%S")
+    dir_output = Path(DIR_OUTPUTS) / "testing" / "computational_overhead" / get_current_time()
     dir_output.mkdir(parents=True, exist_ok=True)
 
     # Make logger
