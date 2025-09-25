@@ -4,8 +4,7 @@ import torch
 
 
 def gen_vanilla_noise_snr(H: torch.Tensor, SNR: float) -> torch.Tensor:
-    """
-    Generate complex white Gaussian noise for a tensor H at a given SNR.
+    """Generate complex white Gaussian noise for a tensor H at a given SNR.
 
     Args:
         H (torch.Tensor): Complex-valued tensor (dtype=torch.complex64 or torch.complex128).
@@ -13,6 +12,7 @@ def gen_vanilla_noise_snr(H: torch.Tensor, SNR: float) -> torch.Tensor:
 
     Returns:
         torch.Tensor: Complex noise tensor of the same shape and dtype as H.
+
     """
     if not H.is_complex():
         raise ValueError(f"H must be a complex tensor, got dtype={H.dtype}")
@@ -38,8 +38,7 @@ def gen_vanilla_noise_snr(H: torch.Tensor, SNR: float) -> torch.Tensor:
 
 
 def gen_phase_noise_nd(data: torch.Tensor, noise_degree: float = 0.01) -> torch.Tensor:
-    """
-    Generate phase noise for complex-valued torch tensor.
+    """Generate phase noise for complex-valued torch tensor.
 
     Args:
         data (torch.Tensor): Complex-valued tensor (dtype=torch.complex64 or torch.complex128).
@@ -47,6 +46,7 @@ def gen_phase_noise_nd(data: torch.Tensor, noise_degree: float = 0.01) -> torch.
 
     Returns:
         torch.Tensor: Complex phase noise tensor of the same shape and dtype as data.
+
     """
     if not data.is_complex():
         raise ValueError(f"data must be a complex tensor, got dtype={data.dtype}")
@@ -69,8 +69,7 @@ def gen_phase_noise_nd(data: torch.Tensor, noise_degree: float = 0.01) -> torch.
 
 
 def gen_packagedrop_noise_nd(data: torch.Tensor, noise_degree: float = 0.01) -> torch.Tensor:
-    """
-    Generate package drop noise for complex-valued torch tensor.
+    """Generate package drop noise for complex-valued torch tensor.
 
     Args:
         data (torch.Tensor): Complex-valued tensor of shape [batch, antenna, hist_len, subcarriers].
@@ -78,8 +77,8 @@ def gen_packagedrop_noise_nd(data: torch.Tensor, noise_degree: float = 0.01) -> 
 
     Returns:
         torch.Tensor: Noise tensor representing the difference between original and dropped data.
-    """
 
+    """
     if noise_degree == 0:
         return torch.zeros_like(data)
 
@@ -97,8 +96,7 @@ def gen_packagedrop_noise_nd(data: torch.Tensor, noise_degree: float = 0.01) -> 
 
 
 def gen_burst_noise_nd(data: torch.Tensor, noise_degree: float = 0.01) -> torch.Tensor:
-    """
-    PyTorch version of genBurstNoise_np: generates a bell-shaped burst of complex noise.
+    """PyTorch version of genBurstNoise_np: generates a bell-shaped burst of complex noise.
 
     Args:
         data (torch.Tensor): Complex input of shape [B batchsize, N num_antennas, T hist_len, K num_subcarriers]
@@ -106,8 +104,8 @@ def gen_burst_noise_nd(data: torch.Tensor, noise_degree: float = 0.01) -> torch.
 
     Returns:
         torch.Tensor: Complex noise tensor, same shape & dtype as `data`.
-    """
 
+    """
     B, N, T, K = data.shape
     burst_amplitude = 2 * noise_degree
     burst_length = 10

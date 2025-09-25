@@ -1,7 +1,7 @@
 import gc
 import logging
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable, List
 
 import lightning.pytorch as pl
 import numpy as np
@@ -11,7 +11,8 @@ from torch import nn
 from torch.utils.data import DataLoader
 
 from src.utils.data_utils import CSIDataset, collect_fn_gather_antennas, collect_fn_separate_antennas, load_data
-from src.utils.normalization import denormalize_output, normalize_input
+from src.utils.norm_utils import denormalize_output, normalize_input
+
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ def test_unit(
     batch_size: int,
     device: torch.device,
     # model
-    list_models: List[pl.LightningModule | nn.Module],
+    list_models: list[pl.LightningModule | nn.Module],
     # criterion
     criterion_nmse: nn.Module,
     criterion_mse: nn.Module,
@@ -103,10 +104,7 @@ def test_unit(
         list_se = []
         list_se0 = []
 
-        if model.is_separate_antennas:
-            dataloader = test_dataloader_separate_antennas
-        else:
-            dataloader = test_dataloader
+        dataloader = test_dataloader_separate_antennas if model.is_separate_antennas else test_dataloader
 
         for hist, target in dataloader:
             hist, target = hist.to(device), target.to(device)

@@ -2,8 +2,7 @@ import torch
 
 
 def compute_power(data: torch.Tensor) -> torch.Tensor:
-    """
-    compute the power of the signal or the noise
+    """Compute the power of the signal or the noise
     - data is complex-valued tensor with shape [batch_size, num_antennas, hist_len, num_subcarriers]
     - return the power of the signal or the noise (real scalar)
     """
@@ -15,32 +14,22 @@ def compute_snr(power_signal: torch.Tensor, power_noise: torch.Tensor) -> torch.
 
 
 if __name__ == "__main__":
-    """
-    compute the relationship between the noise degree and the SNR
-    - load the regular testing dataset under tdd scenario
-    - compute the SNR for each noise degree
-    - save the results in a csv file
-    - do the reverse engineering to find the noise degree for each SNR
-    - save the results in a csv file or json file
-    - plot the results
-    """
-
     import json
-    from datetime import datetime
     from itertools import product
     from pathlib import Path
 
     import numpy as np
     import pandas as pd
-    from src.noise.noise import gen_burst_noise_nd, gen_phase_noise_nd
-    from src.utils.main_utils import make_logger
-    from src.utils.normalization import normalize_input
     from tqdm import tqdm
 
+    from src.testing.noise.noise import gen_burst_noise_nd, gen_phase_noise_nd
     from src.utils.data_utils import LIST_CHANNEL_MODEL, LIST_DELAY_SPREAD, LIST_MIN_SPEED_TEST, load_data
     from src.utils.dirs import DIR_DATA, DIR_OUTPUTS
+    from src.utils.main_utils import make_logger
+    from src.utils.norm_utils import normalize_input
+    from src.utils.time_utils import get_current_time
 
-    dir_output = Path(DIR_OUTPUTS) / "noise" / "noise_degree" / datetime.now().strftime("%Y%m%d_%H%M%S")
+    dir_output = Path(DIR_OUTPUTS) / "noise" / "noise_degree" / get_current_time()
     dir_output.mkdir(parents=True, exist_ok=True)
     logger = make_logger(dir_output)
 

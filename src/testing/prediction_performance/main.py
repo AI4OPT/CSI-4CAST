@@ -1,4 +1,4 @@
-from src.cp_testing.config import (
+from src.testing.config import (
     BATCH_SIZE,
     JOBS_PER_MODEL,
     LIST_MODELS,
@@ -6,12 +6,11 @@ from src.cp_testing.config import (
     log_gpu_memory_usage,
     slice_combinations,
 )
-from src.noise.noise_testing import Noise
+from src.testing.noise.noise_testing import Noise
 
 
 def get_array_mapping(array_id):
-    """
-    Map SLURM array task ID to specific parameter combination.
+    """Map SLURM array task ID to specific parameter combination.
 
     Dynamically assigns array IDs based on the models in list_model_name:
     - Jobs 1-10: list_model_name[0]
@@ -21,7 +20,6 @@ def get_array_mapping(array_id):
 
     Returns the model name and slice info for the given array_id.
     """
-
     total_models = len(LIST_MODELS)
     max_array_id = total_models * JOBS_PER_MODEL
 
@@ -44,30 +42,53 @@ def get_array_mapping(array_id):
 
 
 if __name__ == "__main__":
-    import datetime
+    import argparse
     import gc
     import os
     from pathlib import Path
 
     import torch
-    from src.cp.loss.loss import MSELoss, NMSELoss, SELoss
-    from src.cp_testing.get_models import get_eval_model, wrap_model_with_imputer
-    from src.cp_testing.test_unit import test_unit
-    from src.utils.main_utils import make_logger
     from tqdm import tqdm
 
+    from src.cp.loss.loss import MSELoss, NMSELoss, SELoss
+    from src.testing.get_models import get_eval_model, wrap_model_with_imputer
+    from src.testing.prediction_performance.test_unit import test_unit
     from src.utils.dirs import DIR_DATA, DIR_OUTPUTS
+    from src.utils.main_utils import make_logger
+    from src.utils.time_utils import get_current_time
 
-    # Get SLURM array task ID
-    array_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", "1"))
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description="Run prediction performance testing")
+    parser.add_argument(
+        "--model", "-m", type=str, help="Specific model to test (if not provided, uses SLURM array mode)"
+    )
+    args = parser.parse_args()
 
-    # get the combination
-    model_name, slice_info = get_array_mapping(array_id)
+    # Determine mode: standalone or cluster
+    if args.model:
+        # Standalone mode - test specific model without slicing
+        model_name = args.model
+        if model_name not in LIST_MODELS:
+            raise ValueError(f"Model {model_name} not found in LIST_MODELS: {LIST_MODELS}")
+        slice_info = None
+        mode = "local"
+    else:
+        # Cluster mode - use SLURM array task ID
+        array_id = int(os.environ.get("SLURM_ARRAY_TASK_ID", "1"))
+        model_name, slice_info = get_array_mapping(array_id)
+        mode = "cluster"
 
     # make output directory
-    dir_outputs = Path(DIR_OUTPUTS) / "cp_testing"
-    cur_time = datetime.datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    dir_outputs = dir_outputs / "testing" / f"{model_name}" / f"slice_{slice_info[0] + 1}" / cur_time
+    dir_outputs = Path(DIR_OUTPUTS) / "testing" / "prediction_performance"
+    cur_time = get_current_time()
+
+    if mode == "local":
+        dir_outputs = dir_outputs / f"{model_name}" / "full_test" / cur_time
+    else:
+        # slice_info is guaranteed to be not None in cluster mode
+        assert slice_info is not None, "slice_info should not be None in cluster mode"
+        dir_outputs = dir_outputs / f"{model_name}" / f"slice_{slice_info[0] + 1}" / cur_time
+
     dir_outputs.mkdir(parents=True, exist_ok=True)
 
     df_path = dir_outputs / "result.csv"
@@ -81,11 +102,16 @@ if __name__ == "__main__":
         device_name = torch.cuda.get_device_name(0)
     logger.info("device - {} | {}".format(device, device_name if torch.cuda.is_available() else "CPU"))
 
-    # get the combination
-    model_name, slice_info = get_array_mapping(array_id)
-    logger.info(
-        f"Array ID {array_id}: Running model - {model_name}, slice: {slice_info[0] + 1} of {slice_info[1]} total jobs"
-    )
+    # Log mode and configuration
+    if mode == "local":
+        logger.info(f"Running in local mode - model: {model_name} (full test, no slicing)")
+    else:
+        # slice_info is guaranteed to be not None in cluster mode
+        assert slice_info is not None, "slice_info should not be None in cluster mode"
+        logger.info(
+            f"Running in cluster mode - Array ID {array_id}: model: {model_name}, "
+            f"slice: {slice_info[0] + 1} of {slice_info[1]} total jobs"
+        )
 
     # make criterion
     criterion_nmse = NMSELoss().to(device)
@@ -104,13 +130,18 @@ if __name__ == "__main__":
     # Create all combinations for this model
     list_all_combs = create_all_combinations()
 
-    # Slice combinations for this array job
-    list_assigned_combs = slice_combinations(list_all_combs, slice_info)
-
-    tot_combs = len(list_assigned_combs)
-    tot_all_combs = len(list_all_combs)
-
-    logger.info(f"Processing {tot_combs} out of {tot_all_combs} total combinations for {model_name}")
+    # Handle combinations based on mode
+    if mode == "local":
+        # Use all combinations without slicing
+        list_assigned_combs = list_all_combs
+        tot_combs = len(list_assigned_combs)
+        logger.info(f"Processing all {tot_combs} combinations for {model_name} (local mode)")
+    else:
+        # Slice combinations for this array job
+        list_assigned_combs = slice_combinations(list_all_combs, slice_info)
+        tot_combs = len(list_assigned_combs)
+        tot_all_combs = len(list_all_combs)
+        logger.info(f"Processing {tot_combs} out of {tot_all_combs} total combinations for {model_name} (cluster mode)")
 
     # Load all models once and keep on CPU - much more efficient!
     logger.info("Loading all models and keeping on CPU...")
@@ -141,15 +172,9 @@ if __name__ == "__main__":
 
         # Select the right model based on scenario and noise type
         if noise_type == "packagedrop":
-            if scenario == "TDD":
-                current_model = model_imputer_TDD
-            else:  # FDD
-                current_model = model_imputer_FDD
+            current_model = model_imputer_TDD if scenario == "TDD" else model_imputer_FDD
         else:
-            if scenario == "TDD":
-                current_model = model_TDD
-            else:  # FDD
-                current_model = model_FDD
+            current_model = model_TDD if scenario == "TDD" else model_FDD
 
         # Move model to GPU for testing
         current_model.to(device)
