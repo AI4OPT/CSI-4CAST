@@ -21,8 +21,7 @@ class NMSELoss(nn.Module):
         return nmse
 
     def forward(self, x_hat, x, by_step: bool = False, step_dim: int | None = None):
-        """
-        here the step means the prediction step
+        """Here the step means the prediction step
         - by_step: if True, return the NMSE by step, otherwise return the average NMSE
         - step_dim: the dimension of the step, auto-detected if None
           For [batch_size, num_antennas, time_step, num_subcarriers]: step_dim=2
@@ -58,8 +57,7 @@ class MSELoss(nn.Module):
         return mse
 
     def forward(self, x_hat, x, by_step: bool = False, step_dim: int | None = None):
-        """
-        here the step means the prediction step
+        """Here the step means the prediction step
         - by_step: if True, return the MSE by step, otherwise return the average MSE
         - step_dim: the dimension of the step, auto-detected if None
           For [batch_size, num_antennas, time_step, num_subcarriers]: step_dim=2
@@ -122,14 +120,12 @@ class SELoss(nn.Module):
         return se_pred, se_true
 
     def _compute_se(self, x_hat, x):
-        """
-        Handle different input formats and convert to complex tensors for SE computation
+        """Handle different input formats and convert to complex tensors for SE computation
         Supports:
         - [batch_size, num_antennas, pred_len, num_subcarriers] complex (new format)
         - [batch_size * num_antennas, pred_len, num_subcarriers*2] real (old format)
 
         """
-
         if torch.is_complex(x_hat):
             # New complex tensor format: [batch_size, num_antennas, pred_len, num_subcarriers]
             if x_hat.dim() == 4:  # [batch_size, num_antennas, pred_len, num_subcarriers] complex
@@ -162,6 +158,6 @@ class SELoss(nn.Module):
         numerator = inner_product.abs().pow(2)
         denominator = power_hat * self.sigma2
         se_k = torch.log2(1 + numerator / denominator)
-        se = se_k.sum(dim=-1)
+        se = se_k.mean(dim=-1)
 
         return se

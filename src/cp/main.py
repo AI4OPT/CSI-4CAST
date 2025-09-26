@@ -13,10 +13,8 @@ from src.utils.main_utils import (
 )
 from src.utils.model_utils import load_model
 
-torch.set_float32_matmul_precision("medium")
 
-# Enable anomaly detection for debugging gradient computation issues
-torch.autograd.set_detect_anomaly(True)
+torch.set_float32_matmul_precision("medium")
 
 parser = arg_parser()
 args = parser.parse_args()
@@ -32,9 +30,9 @@ output_dir = make_output_dir(config)
 
 # make logger
 logger = make_logger(output_dir)
-logger.info("load config from - {}".format(args.hparams_csi_pred))
-logger.info("output directory - {}".format(output_dir))
-logger.info("seed - {}".format(config.seed))
+logger.info(f"load config from - {args.hparams_csi_pred}")
+logger.info(f"output directory - {output_dir}")
+logger.info(f"seed - {config.seed}")
 
 
 # device
@@ -45,7 +43,7 @@ logger.info("device - {} | {}".format(device, device_name if torch.cuda.is_avail
 
 # model
 model = load_model(config, device=device)
-logger.info("model - {}".format(str(model)))
+logger.info(f"model - {model!s}")
 
 # data module
 datamodule = TrainValDataModule(config.data)
@@ -75,14 +73,14 @@ trainer = pl.Trainer(  # strategy TODO: add strategy
 
 # start training
 if config.model.checkpoint_path is not None:
-    logger.info("Resuming training from checkpoint: {}".format(config.model.checkpoint_path))
+    logger.info(f"Resuming training from checkpoint: {config.model.checkpoint_path}")
     trainer.fit(model, datamodule, ckpt_path=config.model.checkpoint_path)
 else:
     logger.info("Starting training from scratch...")
     trainer.fit(model, datamodule)
 
 # log complete
-logger.info("Training complete. Checkpoint saved at: {}".format(ckpt_cb.best_model_path))
-logger.info("TensorBoard logs saved at: {}".format(tb_logger.log_dir))
-logger.info("Output directory: {}".format(output_dir))
-logger.info("Run 'tensorboard --logdir {}' to view TensorBoard logs.".format(tb_logger.log_dir))
+logger.info(f"Training complete. Checkpoint saved at: {ckpt_cb.best_model_path}")
+logger.info(f"TensorBoard logs saved at: {tb_logger.log_dir}")
+logger.info(f"Output directory: {output_dir}")
+logger.info(f"Run 'tensorboard --logdir {tb_logger.log_dir}' to view TensorBoard logs.")

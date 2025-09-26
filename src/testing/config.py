@@ -28,14 +28,13 @@ JOBS_PER_MODEL = 20
 
 
 def create_all_combinations():
-    """
-    Create all combinations for both regular and generation testing.
+    """Create all combinations for both regular and generation testing.
     This is the same for all models.
 
     Returns:
         list: All combinations as tuples of (is_gen, scenario, noise_type, noise_degree, cm, ds, ms)
-    """
 
+    """
     noise = Noise()
     all_combinations = []
 
@@ -73,8 +72,7 @@ def create_all_combinations():
 
 
 def slice_combinations(list_all_combs, slice_info):
-    """
-    Slice the combinations list based on array job allocation.
+    """Slice the combinations list based on array job allocation.
 
     Args:
         list_all_combs: List of all combinations
@@ -82,6 +80,7 @@ def slice_combinations(list_all_combs, slice_info):
 
     Returns:
         Sliced list of combinations for this specific array job
+
     """
     slice_idx, total_jobs = slice_info
     total_combs = len(list_all_combs)
@@ -102,11 +101,11 @@ def slice_combinations(list_all_combs, slice_info):
 
 
 def log_gpu_memory_usage(logger=None):
-    """
-    Log current GPU memory usage if available.
+    """Log current GPU memory usage if available.
 
     Args:
         logger: Logger instance to use (optional)
+
     """
     try:
         if torch.cuda.is_available():

@@ -4,10 +4,11 @@ from pathlib import Path
 
 import lightning.pytorch as pl
 import torch
+from src.noise.noise import gen_vanilla_noise_snr
+from src.utils.normalization import normalize_input
 from torch.utils.data import DataLoader
 
 from src.cp.config.config import DataConfig
-from src.noise.noise import gen_vanilla_noise_snr
 from src.utils.data_utils import (
     LIST_CHANNEL_MODEL,
     LIST_DELAY_SPREAD,
@@ -18,7 +19,7 @@ from src.utils.data_utils import (
     collect_fn_gather_antennas,
     collect_fn_separate_antennas,
 )
-from src.utils.normalization import normalize_input
+
 
 logger = logging.getLogger(__name__)
 
@@ -30,17 +31,14 @@ class TrainValDataModule(pl.LightningDataModule):
 
     def setup(self, stage=None):
         """Setup datasets for training and validation with subset-aware splitting."""
-
         # Use subset-stratified splitting to ensure all 27 subsets are represented in both train and val
         self._setup_subset_stratified_split()
 
     def _setup_subset_stratified_split(self):
-        """
-        Load data with subset-stratified splitting.
+        """Load data with subset-stratified splitting.
         Each of the 27 subsets contributes proportionally to both train and validation sets.
         This ensures representative validation without data leakage.
         """
-
         H_hist_train_list = []
         H_pred_train_list = []
         H_hist_val_list = []
@@ -177,8 +175,7 @@ class TrainValDataModule(pl.LightningDataModule):
         )
 
     def get_data_shapes(self):
-        """
-        Return (history_shape, pred_shape) of a single sample from train_dataset.
+        """Return (history_shape, pred_shape) of a single sample from train_dataset.
         If train_dataset is not yet set up or empty, returns (None, None).
         """
         if not hasattr(self, "train_dataset") or self.train_dataset is None or len(self.train_dataset) == 0:
@@ -201,3 +198,4 @@ if __name__ == "__main__":
     print(f"   🏋️ Training samples: {len(data_module.train_dataset)}")
     print(f"   🔍 Validation samples: {len(data_module.val_dataset)}")
     print("   📊 All 27 subsets represented in both train and validation")
+s

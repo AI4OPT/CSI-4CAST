@@ -1,12 +1,10 @@
-import torch
+import pickle
+from pathlib import Path
 
-from src.testing.get_models import get_eval_model
 
+a = Path("z_refer/data/stats/fdd/normalization_stats.pkl")
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+with open(a, "rb") as f:
+    data = pickle.load(f)
 
-model = get_eval_model(model_name="MODEL", device=DEVICE, scenario="TDD")
-
-input = torch.randn(32, 16, 600).to(DEVICE)
-output = model(input)
-print(output.shape)
+print(data)

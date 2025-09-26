@@ -1,6 +1,8 @@
 # VSCode
 .vscode/
 z_artifacts
+z_refer
+scripts/outs/*
 
 # Python
 *.pyc

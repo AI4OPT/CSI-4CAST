@@ -1,7 +1,7 @@
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Literal
 
 import yaml
 
@@ -27,8 +27,8 @@ class ModelConfig:
 
     name: str = "LLM4CP"
     is_separate_antennas: bool = True
-    params: Dict[str, Any] = field(default_factory=dict)
-    checkpoint_path: Optional[str] = None
+    params: dict[str, Any] = field(default_factory=dict)
+    checkpoint_path: str | None = None
 
 
 @dataclass
@@ -36,7 +36,7 @@ class TrainingConfig:
     """Training-related configuration."""
 
     num_epochs: int = 500
-    gradient_clip_val: Optional[float] = None
+    gradient_clip_val: float | None = None
     accumulate_grad_batches: int = 1
     check_val_every_n_epoch: int = 1
 
@@ -62,7 +62,7 @@ class OptimizerConfig:
     """Optimizer configuration."""
 
     name: str = "Adam"
-    params: Dict[str, Any] = field(
+    params: dict[str, Any] = field(
         default_factory=lambda: {
             "lr": 0.0005,
             "weight_decay": 0.0001,
@@ -77,7 +77,7 @@ class SchedulerConfig:
     """Learning rate scheduler configuration."""
 
     name: str = "ReduceLROnPlateau"
-    params: Dict[str, Any] = field(
+    params: dict[str, Any] = field(
         default_factory=lambda: {
             "mode": "min",
             "factor": 0.1,
@@ -94,7 +94,7 @@ class LossConfig:
     """Loss function configuration."""
 
     name: str = "NMSE"
-    params: Dict[str, Any] = field(default_factory=dict)
+    params: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -131,7 +131,7 @@ class ExperimentConfig:
             self.output_dir = str(Path(DIR_OUTPUTS) / self.prefix / self.model_name)
 
     @classmethod
-    def fromDict(cls, dict_config: Dict[str, Any]) -> "ExperimentConfig":
+    def fromDict(cls, dict_config: dict[str, Any]) -> "ExperimentConfig":
         """Create config from dictionary."""
         # Handle nested configurations
         if "data" in dict_config and isinstance(dict_config["data"], dict):
@@ -152,7 +152,7 @@ class ExperimentConfig:
     @classmethod
     def fromJson(cls, path_json: str) -> "ExperimentConfig":
         """Load config from JSON file."""
-        with open(path_json, "r") as f:
+        with open(path_json) as f:
             dict_config = json.load(f)
         return cls.fromDict(dict_config)
 
@@ -166,12 +166,12 @@ class ExperimentConfig:
 
         yaml.SafeLoader.add_constructor("tag:yaml.org,2002:python/tuple", tuple_constructor)
 
-        with open(path_yaml, "r") as f:
+        with open(path_yaml) as f:
             dict_config = yaml.safe_load(f)
 
         return cls.fromDict(dict_config)
 
-    def toDict(self) -> Dict[str, Any]:
+    def toDict(self) -> dict[str, Any]:
         """Convert config to dictionary."""
 
         def _toDict(obj) -> Any:

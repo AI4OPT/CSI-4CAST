@@ -10,14 +10,14 @@
 #SBATCH --output=scripts/outs/%x_%j.out
 
 
-cd /storage/home/hcoda1/1/scheng326/CSI_main
+cd /storage/home/hcoda1/1/scheng326/CSI-4CAST
 
 module load mamba/1.4.9
-mamba activate csi-pred
+mamba activate csi-4cast-env
 
 echo "Starting computational overhead analysis"
 
-python3 -m src.cp_testing.computational_overhead
+python3 -m src.testing.computational_overhead.main
 
 echo "Completed computational overhead analysis"
 

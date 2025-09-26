@@ -60,8 +60,7 @@ LIST_MIN_SPEED_TEST_GEN = sorted([*range(3, 46, 3), 1, 10])
 
 
 def make_folder_name(cm: str, ds: float, ms: int, **kwargs) -> str:
-    """
-    Generate a standardized folder name based on channel model, delay spread, and minimum speed.
+    """Generate a standardized folder name based on channel model, delay spread, and minimum speed.
 
     Args:
         cm (str): Channel model identifier (e.g., 'A', 'B', 'C', 'D', 'E')
@@ -77,6 +76,7 @@ def make_folder_name(cm: str, ds: float, ms: int, **kwargs) -> str:
     Example:
         >>> make_folder_name('A', 30e-9, 10)
         'cm_A_ds_030_ms_010'
+
     """
     # the precision of the delay spread is int
     ds = round(ds * 1e9)
@@ -101,8 +101,7 @@ def _load_data(
     is_U2D: bool = False,
     num_load: int = -1,
 ) -> torch.Tensor:
-    """
-    Load CSI dataset for a specific channel model, delay spread, and minimum speed configuration.
+    """Load CSI dataset for a specific channel model, delay spread, and minimum speed configuration.
 
     Args:
         dir_data (Path): Root directory containing the dataset
@@ -126,8 +125,8 @@ def _load_data(
         - Historical data: 'H_U_hist.pt'
         - TDD prediction: 'H_U_pred.pt'
         - FDD prediction: 'H_D_pred.pt'
-    """
 
+    """
     assert not (is_train and is_gen), "generalization is only for test mode"
 
     file_name = "H_U_hist.pt" if is_hist else "H_D_pred.pt" if is_U2D else "H_U_pred.pt"
@@ -161,8 +160,7 @@ def load_data(
     is_U2D: bool = False,
     num_load: int = -1,
 ) -> torch.Tensor:
-    """
-    Load and concatenate CSI datasets across multiple channel configurations.
+    """Load and concatenate CSI datasets across multiple channel configurations.
 
     Args:
         dir_data (Path): Root directory containing the dataset
@@ -185,8 +183,8 @@ def load_data(
         This function iterates through all combinations of channel models, delay spreads,
         and minimum speeds, loading data for each configuration and concatenating them
         along the batch dimension.
-    """
 
+    """
     assert not (is_train and is_gen), "generalization is only for test mode"
 
     data = []
@@ -213,8 +211,7 @@ def load_data(
 
 
 class CSIDataset(Dataset):
-    """
-    PyTorch Dataset class for CSI prediction tasks.
+    """PyTorch Dataset class for CSI prediction tasks.
 
     This dataset handles pairs of historical and prediction CSI data for training
     and evaluation of CSI prediction models.
@@ -224,38 +221,39 @@ class CSIDataset(Dataset):
                               [batch_size, num_antennas, hist_len, num_subcarriers]
         H_pred (torch.Tensor): Prediction target CSI data with shape
                               [batch_size, num_antennas, pred_len, num_subcarriers]
+
     """
 
     def __init__(self, H_hist, H_pred):
-        """
-        Initialize the CSI dataset.
+        """Initialize the CSI dataset.
 
         Args:
             H_hist (torch.Tensor): Historical CSI data tensor
             H_pred (torch.Tensor): Prediction target CSI data tensor
+
         """
         super().__init__()
         self.H_hist = H_hist  # [batch_size, num_antennas, hist_len, num_subcarriers]
         self.H_pred = H_pred  # [batch_size, num_antennas, pred_len, num_subcarriers]
 
     def __len__(self):
-        """
-        Get the number of samples in the dataset.
+        """Get the number of samples in the dataset.
 
         Returns:
             int: Number of samples in the dataset
+
         """
         return len(self.H_hist)
 
     def __getitem__(self, idx):
-        """
-        Get a sample from the dataset.
+        """Get a sample from the dataset.
 
         Args:
             idx (int): Index of the sample to retrieve
 
         Returns:
             tuple: (historical_csi, prediction_target_csi) pair
+
         """
         hist = self.H_hist[idx]
         pred = self.H_pred[idx]
@@ -263,8 +261,7 @@ class CSIDataset(Dataset):
 
 
 def collect_fn_separate_antennas(batch):
-    """
-    Collate function for DataLoader that processes CSI data for separate antenna training.
+    """Collate function for DataLoader that processes CSI data for separate antenna training.
 
     This function transforms batched CSI data from complex-valued antenna-grouped format
     to real-valued flattened format suitable for training models that process each
@@ -286,8 +283,8 @@ def collect_fn_separate_antennas(batch):
         1. Stack batch samples: [batch_size, num_antennas, time_len, num_subcarriers] complex
         2. Flatten antennas: [batch_size * num_antennas, time_len, num_subcarriers] complex
         3. Convert to real: [batch_size * num_antennas, time_len, num_subcarriers * 2] real
-    """
 
+    """
     list_hist, list_pred = zip(*batch, strict=False)
     hist = torch.stack(list_hist, dim=0)  # [batch_size, num_antennas, hist_len, num_subcarriers]
     pred = torch.stack(list_pred, dim=0)  # [batch_size, num_antennas, pred_len, num_subcarriers]
@@ -303,6 +300,15 @@ def collect_fn_separate_antennas(batch):
     pred = pred.view(pred.shape[0], pred.shape[1], -1)  # [batch_size * num_antennas, pred_len, num_subcarriers*2] real
 
     return hist, pred  # return [batch_size * num_antennas, hist_len, num_subcarriers*2] real
+
+
+def collect_fn_gather_antennas(batch):
+    # from [batch_size, num_antennas, hist_len, num_subcarriers] complex
+    list_hist, list_pred = zip(*batch, strict=False)
+    hist = torch.stack(list_hist, dim=0)  # [batch_size, num_antennas, hist_len, num_subcarriers]
+    pred = torch.stack(list_pred, dim=0)  # [batch_size, num_antennas, pred_len, num_subcarriers]
+
+    return hist, pred  # return [batch_size, num_antennas, hist_len/pred_len, num_subcarriers] complex
 
 
 # AWGN noise for training
