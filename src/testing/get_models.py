@@ -13,8 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 def get_ckpt_path(model_name: str, scenario: str) -> str | None:
-    """for TDD and FDD, return the best ckpt path for each model_name"""
-
+    """For TDD and FDD, return the best ckpt path for each model_name"""
     if model_name == "NP":
         return None
     else:
@@ -109,12 +108,10 @@ class ForwardBackwardImputer(nn.Module):
         return x_filled
 
     def forward(self, x):
-        """
-        - if model.is_separate_antennas: data shape is [batch_size, hist_len, num_subcarriers*2]
+        """- if model.is_separate_antennas: data shape is [batch_size, hist_len, num_subcarriers*2]
         - else: data shape is [batch_size, 2, num_antennas, hist_len, num_subcarriers]
         convert to [batch_size, hist_len, num_subcarriers*2] for imputation
         """
-
         *batch_dims, L, D = x.shape
         x_flat = x.reshape(-1, L, D)  # Flatten batch dimensions
         x_imp_flat = self._impute_missing(x_flat)

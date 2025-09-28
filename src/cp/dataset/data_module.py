@@ -4,11 +4,10 @@ from pathlib import Path
 
 import lightning.pytorch as pl
 import torch
-from src.noise.noise import gen_vanilla_noise_snr
-from src.utils.normalization import normalize_input
 from torch.utils.data import DataLoader
 
 from src.cp.config.config import DataConfig
+from src.noise.noise import gen_vanilla_noise_snr
 from src.utils.data_utils import (
     LIST_CHANNEL_MODEL,
     LIST_DELAY_SPREAD,
@@ -19,6 +18,7 @@ from src.utils.data_utils import (
     collect_fn_gather_antennas,
     collect_fn_separate_antennas,
 )
+from src.utils.norm_utils import normalize_input
 
 
 logger = logging.getLogger(__name__)
@@ -198,4 +198,3 @@ if __name__ == "__main__":
     print(f"   🏋️ Training samples: {len(data_module.train_dataset)}")
     print(f"   🔍 Validation samples: {len(data_module.val_dataset)}")
     print("   📊 All 27 subsets represented in both train and validation")
-s

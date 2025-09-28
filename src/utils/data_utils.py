@@ -52,6 +52,9 @@ LIST_DELAY_SPREAD = [30e-9, 100e-9, 300e-9]
 LIST_MIN_SPEED_TRAIN = [1, 10, 30]
 LIST_MIN_SPEED_TEST = [1, 10, 30]
 
+# AWGN noise for training
+SNR_RANGE_GAUSSIAN_NOISE_TRAIN = (0, 25)
+
 
 # dataset for generalization testing
 LIST_CHANNEL_MODEL_GEN = ["A", "B", "C", "D", "E"]
@@ -309,7 +312,3 @@ def collect_fn_gather_antennas(batch):
     pred = torch.stack(list_pred, dim=0)  # [batch_size, num_antennas, pred_len, num_subcarriers]
 
     return hist, pred  # return [batch_size, num_antennas, hist_len/pred_len, num_subcarriers] complex
-
-
-# AWGN noise for training
-SNR_RANGE_GAUSSIAN_NOISE_TRAIN = (0, 25)

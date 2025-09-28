@@ -25,7 +25,7 @@ class DataConfig:
 class ModelConfig:
     """Model-related configuration."""
 
-    name: str = "LLM4CP"
+    name: str = "RNN_TDD"
     is_separate_antennas: bool = True
     params: dict[str, Any] = field(default_factory=dict)
     checkpoint_path: str | None = None
@@ -201,10 +201,10 @@ if __name__ == "__main__":
     import argparse
     from pathlib import Path
 
-    from src.utils.data_utils import HIST_LEN, NUM_SUBCARRIERS, PRED_LEN, TOT_ANTENNAS
+    from src.utils.data_utils import NUM_SUBCARRIERS, PRED_LEN
 
     parser = argparse.ArgumentParser(description="Experiment configuration management")
-    parser.add_argument("--model", "-m", type=str, default="CNN", help="Model name")
+    parser.add_argument("--model", "-m", type=str, default="RNN", help="Model name")
     parser.add_argument(
         "--output-dir", "-o", type=str, default="z_artifacts/config/cp", help="Output directory for config files"
     )
@@ -222,103 +222,8 @@ if __name__ == "__main__":
     # model configuration
     model_name = args.model
 
-    if model_name == "CNN":
-        config.model.name = "CNN"
-        config.model.is_separate_antennas = True
-        config.model.checkpoint_path = None
-        config.model.params = {}
-
-    elif model_name == "LLM4CP":
-        config.model.name = "LLM4CP"
-        config.model.is_separate_antennas = True
-        config.model.checkpoint_path = None
-        config.model.params = {
-            "gpt_type": "gpt2",
-            "d_ff": 768,
-            "d_model": 768,
-            "gpt_layers": 6,
-            "pred_len": 4,
-            "prev_len": 16,
-            "mlp": 0,
-            "res_layers": 4,
-            "K": 300,
-            "UQh": 1,
-            "UQv": 1,
-            "BQh": 1,
-            "BQv": 1,
-            "patch_size": 4,
-            "stride": 1,
-            "res_dim": 64,
-            "embed": "timeF",
-            "freq": "h",
-            "dropout": 0.1,
-        }
-
-    elif model_name == "MODEL":
-        config.model.name = "MODEL"
-        config.model.is_separate_antennas = True
-        config.model.checkpoint_path = None
-        config.model.params = {
-            # data
-            "hist_len": HIST_LEN,
-            "pred_len": PRED_LEN,
-            "dim_data": NUM_SUBCARRIERS * 2,
-            "dim_model": 768,
-            # denoiser
-            "denoiser_num_filters_2d": 3,
-            "denoiser_filter_size_2d": 3,
-            "denoiser_filter_size_1d": 3,
-            "denoiser_activation": "tanh",
-            # ARL
-            "arl_is_U2D": is_U2D,  # TDD as default
-            "arl_temporal_proj_num_layers": 2,
-            "arl_temporal_proj_hidden_dim": 256,
-            "arl_temporal_proj_is_arl": False,
-            "arl_temporal_proj_output_activation_name": "none",
-            "arl_temporal_proj_arl_operation": "add",
-            "arl_subcarrier_proj_num_layers": 2,
-            "arl_subcarrier_proj_hidden_dim": 256,
-            "arl_subcarrier_proj_is_arl": True,
-            "arl_subcarrier_proj_output_activation_name": "sigmoid",
-            "arl_subcarrier_proj_arl_operation": "add",
-            # Shuffle Embedding
-            "embedding_num_res_layers": 4,
-            "embedding_res_dim": 64,
-            "embedding_res_groups": 4,
-            "embedding_embed": "timeF",
-            "embedding_freq": "h",
-            "embedding_dropout": 0.1,
-            # TransformerPredictor
-            "transformer_num_layers": 2,
-            "transformer_num_heads": 4,
-            "transformer_hidden_dim": 1024,
-            "transformer_dropout_prob": 0.1,
-        }
-
-    elif model_name == "DeepAR":
-        config.model.name = "DeepAR"
-        config.model.is_separate_antennas = True
-        config.model.checkpoint_path = None
-        config.model.params = {
-            "dim_data": NUM_SUBCARRIERS * 2,
-            "encoder_hidden_dim": 1024,
-            "encoder_num_layers": 2,
-            "encoder_output_activation": "none",
-            "lstm_hidden_dim": 1024,
-            "lstm_num_layers": 4,
-            "lstm_dropout": 0.1,
-            "mean_layer_hidden_dim": 1024,
-            "mean_layer_num_layers": 1,
-            "mean_layer_output_activation": "none",
-            "std_layer_hidden_dim": 1024,
-            "std_layer_num_layers": 1,
-            "std_layer_output_activation": "softplus",
-            "pred_len": PRED_LEN,
-            "is_sample": True,
-        }
-
-    elif model_name == "RNN":
-        config.model.name = "RNN"
+    if model_name == "RNN":
+        config.model.name = f"{model_name}_{scenario}"
         config.model.is_separate_antennas = True
         config.model.checkpoint_path = None
         config.model.params = {
@@ -326,46 +231,6 @@ if __name__ == "__main__":
             "rnn_hidden_dim": NUM_SUBCARRIERS * 4,
             "rnn_num_layers": 4,
             "pred_len": PRED_LEN,
-        }
-
-    elif model_name == "STEMGNN":
-        config.model.name = "STEMGNN"
-        config.model.is_separate_antennas = True
-        config.model.checkpoint_path = None
-        config.model.params = {
-            "embedded_dim": NUM_SUBCARRIERS * 2,
-            "window_size": HIST_LEN,
-            "horizon": PRED_LEN,
-            "n_stacks": 2,
-            "multi_layer": 5,
-            "dropout_rate": 0.5,
-            "leaky_rate": 0.2,
-        }
-
-    elif model_name == "GRU":
-        config.model.name = "GRU"
-        config.model.is_separate_antennas = True
-        config.model.checkpoint_path = None
-        config.model.params = {
-            "features": NUM_SUBCARRIERS * 2,
-            "input_size": NUM_SUBCARRIERS * 2,
-            "hidden_size": NUM_SUBCARRIERS * 4,
-            "num_layers": 4,
-            "pred_len": PRED_LEN,
-        }
-
-    elif model_name == "TFT":
-        config.model.name = "TFT"
-        config.model.is_separate_antennas = True
-        config.model.checkpoint_path = None
-        config.model.params = {
-            "dim_data": NUM_SUBCARRIERS * 2,
-            "hidden_dim": 256,
-            "lstm_layers": 2,
-            "num_attention_heads": 4,
-            "dropout": 0.1,
-            "pred_len": PRED_LEN,
-            "context_length": HIST_LEN,
         }
 
     else:

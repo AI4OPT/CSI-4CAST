@@ -2,7 +2,7 @@ from itertools import product
 
 import torch
 
-from src.testing.noise.noise_testing import Noise
+from src.noise.noise_testing import Noise
 from src.utils.data_utils import (
     LIST_CHANNEL_MODEL,
     LIST_CHANNEL_MODEL_GEN,

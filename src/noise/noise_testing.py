@@ -4,7 +4,7 @@ from typing import ClassVar
 
 import torch
 
-from src.testing.noise.noise import (
+from src.noise.noise import (
     gen_burst_noise_nd,
     gen_packagedrop_noise_nd,
     gen_phase_noise_nd,
@@ -18,7 +18,7 @@ class Noise:
     list_burst_snr: ClassVar[list[int]] = [10, 15, 20, 25]
     list_packagedrop_nd: ClassVar[list[float]] = [0.1, 0.09, 0.08, 0.07, 0.06, 0.05, 0.04, 0.03, 0.02, 0.01]
 
-    path_decide_nd_json: ClassVar[Path] = Path("src/testing/noise/results/decide_nd.json")
+    path_decide_nd_json: ClassVar[Path] = Path("src/noise/results/decide_nd.json")
     with open(path_decide_nd_json) as f:
         decide_nd: ClassVar[dict[str, dict[str, dict[str, float]]]] = json.load(f)
 

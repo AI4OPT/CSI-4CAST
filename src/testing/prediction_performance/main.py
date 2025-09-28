@@ -1,3 +1,4 @@
+from src.noise.noise_testing import Noise
 from src.testing.config import (
     BATCH_SIZE,
     JOBS_PER_MODEL,
@@ -6,16 +7,14 @@ from src.testing.config import (
     log_gpu_memory_usage,
     slice_combinations,
 )
-from src.testing.noise.noise_testing import Noise
 
 
 def get_array_mapping(array_id):
     """Map SLURM array task ID to specific parameter combination.
 
     Dynamically assigns array IDs based on the models in list_model_name:
-    - Jobs 1-10: list_model_name[0]
-    - Jobs 11-20: list_model_name[1]
-    - Jobs 21-30: list_model_name[2]
+    - Jobs 1-20: list_model_name[0]
+    - Jobs 21-40: list_model_name[1]
     - And so on...
 
     Returns the model name and slice info for the given array_id.

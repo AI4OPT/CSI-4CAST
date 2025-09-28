@@ -22,7 +22,7 @@ if __name__ == "__main__":
     import pandas as pd
     from tqdm import tqdm
 
-    from src.testing.noise.noise import gen_burst_noise_nd, gen_phase_noise_nd
+    from src.noise.noise import gen_burst_noise_nd, gen_phase_noise_nd
     from src.utils.data_utils import LIST_CHANNEL_MODEL, LIST_DELAY_SPREAD, LIST_MIN_SPEED_TEST, load_data
     from src.utils.dirs import DIR_DATA, DIR_OUTPUTS
     from src.utils.main_utils import make_logger
