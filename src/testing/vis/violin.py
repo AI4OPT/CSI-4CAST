@@ -1,6 +1,31 @@
-"""Violin plot visualization for CSI model rank distributions."""
+"""Violin plot visualization for CSI model rank distributions.
 
-import argparse
+This module creates violin plots that visualize the distribution of model rankings
+across different experimental scenarios. Violin plots combine the benefits of
+box plots and kernel density estimation to show both summary statistics and
+the full distribution shape of model performance rankings.
+
+Key Features:
+    - Rank distribution visualization with kernel density estimation
+    - Dual y-axis design showing both rank distributions and rank-1 percentages
+    - Automatic model sorting by performance
+    - Color-coded violin plots with consistent model styling
+    - Support for different scenario categories (regular, robustness, generalization)
+    - Interactive legend with comprehensive model and metric information
+
+Visualization Components:
+    - Violin plots: Show full rank distribution shape for each model
+    - Box plots: Display quartiles and outliers within violins
+    - Line plot: Rank-1 percentage overlay on secondary y-axis
+    - Legend: Model identification with performance indicators
+
+The violin plots provide insights into:
+    - Consistency of model performance (narrow vs wide distributions)
+    - Performance ceiling (how often models achieve top ranks)
+    - Performance floor (worst-case ranking scenarios)
+    - Distribution skewness (bias toward good or poor performance)
+"""
+
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -12,69 +37,126 @@ from src.utils.dirs import DIR_OUTPUTS
 from src.utils.vis_utils import get_display_name, plt_styles, set_plot_style, vis_config
 
 
+# =============================================================================
+# VIOLIN PLOT CREATION FUNCTIONS
+# =============================================================================
+
+
 def create_violin_plot(
     csv_path: Path,
     output_dir: Path | None = None,
     metric_type: str | None = None,
     figsize: tuple = vis_config["figsize_single"],
 ) -> None:
-    """Create violin plots for model rank distributions.
+    """Generate violin plots showing model rank distribution patterns.
 
-    Args:
-        csv_path: Path to the rank distributions CSV file
-        output_dir: Directory to save the plots. If None, saves in same directory as CSV
-        metric_type: Type of metric ('nmse' or 'se') for subfolder organization
-        figsize: Figure size for the plots
+    This function creates comprehensive violin plots that visualize how model
+    rankings are distributed across different experimental scenarios. Each violin
+    shows the full distribution of ranks achieved by a model, providing insights
+    into performance consistency and reliability.
+
+    Plot Features:
+        - Violin shapes: Kernel density estimation of rank distributions
+        - Box plots: Quartile information embedded within violins
+        - Dual y-axes: Rank scale (inverted) + rank-1 percentage overlay
+        - Model sorting: Ordered by mean performance for easy comparison
+        - Color coding: Consistent with other visualizations
+
+    Data Processing:
+        1. Load rank distribution data from CSV
+        2. Expand rank counts into individual rank entries
+        3. Create violin plot data structure
+        4. Generate dual-axis visualization with overlays
+        5. Apply consistent styling and export
+
+    Parameters
+    ----------
+    csv_path : Path
+        Path to rank_distributions.csv file containing model ranking data.
+        Expected columns: model, scenario_category, scenario, rank_1, rank_2, ...,
+        rank_N, total_scenarios, mean_rank, rank_1_pct.
+    output_dir : Path, optional
+        Directory for saving violin plots. If None, uses CSV file's directory.
+    metric_type : str, optional
+        Metric type identifier ('nmse' or 'se') for output organization.
+    figsize : tuple, default=vis_config["figsize_single"]
+        Figure dimensions (width, height) in inches.
+
+    Output
+    ------
+    Saves violin plots as PDF files with naming pattern:
+    violin_{scenario_category}_{scenario}.pdf
+
+    Notes
+    -----
+    The violin plots reveal important performance characteristics:
+    - Wide violins: Inconsistent performance across scenarios
+    - Narrow violins: Consistent performance
+    - Skewed violins: Bias toward good or poor performance
+    - High rank-1 percentage: Frequent best-model performance
+
+    The inverted y-axis (rank 1 at top) aligns with intuitive "better = higher"
+    visualization convention.
 
     """
-    # Load the data
+    # =================================================================
+    # DATA LOADING AND PREPARATION
+    # =================================================================
+
+    # Load rank distribution data from CSV file
     df = pd.read_csv(csv_path)
 
-    # Create output directory if not provided
+    # Set up output directory structure
     output_path = Path(csv_path).parent if output_dir is None else Path(output_dir)
 
-    # Add metric type subfolder if specified
+    # Organize output by metric type if specified
     if metric_type:
         output_path = output_path / metric_type
 
     output_path.mkdir(parents=True, exist_ok=True)
 
-    # Get unique scenario combinations
+    # =================================================================
+    # SCENARIO PROCESSING LOOP
+    # =================================================================
+
+    # Process each unique scenario combination separately
     scenario_combinations = df[["scenario_category", "scenario"]].drop_duplicates()
 
-    # Create plots for each scenario combination
+    # Generate violin plot for each scenario combination
     for _, row in scenario_combinations.iterrows():
         scenario_category = row["scenario_category"]
         scenario = row["scenario"]
 
-        # Filter data for this scenario combination
+        # Extract data subset for current scenario
         subset = df[(df["scenario_category"] == scenario_category) & (df["scenario"] == scenario)].copy()
 
         if len(subset) == 0:
             continue
 
-        # Sort models by mean_rank (best to worst) - for SE, lower rank number is better
+        # Order models by performance (best to worst ranking)
         models_sorted = subset.sort_values("mean_rank")["model"].tolist()  # type: ignore
 
-        # # Calculate rank-1 percentage for each model
-        # subset = subset.copy()
-        # subset["rank_1_percentage"] = (subset["rank_1"] / subset["total_scenarios"]) * 100
+        # Alternative sorting approach (commented out):
+        # Could sort by rank-1 percentage instead of mean rank
+        # This would prioritize models that frequently achieve best performance
+        # over models with consistent but not necessarily top performance
 
-        # # Sort models by rank-1 percentage (highest to lowest)
-        # models_sorted = subset.sort_values("rank_1_percentage", ascending=False)["model"].tolist()
+        # =============================================================
+        # VIOLIN PLOT DATA PREPARATION
+        # =============================================================
 
-        # Prepare data for violin plot
-        # We need to create individual rank entries for each scenario
+        # Convert rank counts to individual rank entries for violin plotting
         violin_data = []
 
+        # Expand rank distribution counts into individual data points
         for _, model_row in subset.iterrows():
             model = model_row["model"]
-            # Create rank entries based on rank counts
+            # Convert rank counts to individual rank entries for KDE
             for rank in range(1, len(models_sorted) + 1):
                 rank_col = f"rank_{rank}"
                 if rank_col in model_row and not pd.isna(model_row[rank_col]):  # type: ignore
                     count = int(model_row[rank_col])
-                    # Add 'count' number of entries with this rank for this model
+                    # Create 'count' individual rank entries for violin shape
                     for _ in range(count):
                         violin_data.append({"model": model, "rank": rank})
 
@@ -84,7 +166,11 @@ def create_violin_plot(
 
         violin_df = pd.DataFrame(violin_data)
 
-        # Create violin plot with dual y-axes
+        # =============================================================
+        # DUAL-AXIS VIOLIN PLOT CREATION
+        # =============================================================
+
+        # Set up primary axis for violin plots and secondary for rank-1 percentage
         plt.clf()
         set_plot_style()
         _, ax1 = plt.subplots(figsize=figsize)
@@ -96,8 +182,7 @@ def create_violin_plot(
             color = plt_styles[model]["color"]
             model_colors.append(color)
 
-        # Create violin plot with sorted model order and custom colors
-        # Set cut=0 to truncate KDE at data limits (no extension beyond 1-6)
+        # Generate violin plots with model-specific colors and sorting
         sns.violinplot(
             data=violin_df,
             x="model",
@@ -112,7 +197,11 @@ def create_violin_plot(
             cut=0,  # Truncate KDE at data limits, no extension beyond actual rank range
         )
 
-        # Prepare data for line plot (rank_1_pct)
+        # =============================================================
+        # RANK-1 PERCENTAGE OVERLAY PREPARATION
+        # =============================================================
+
+        # Extract rank-1 percentage data for line plot overlay
         line_data_x = []
         line_data_y = []
         for model in models_sorted:
@@ -122,7 +211,7 @@ def create_violin_plot(
                 line_data_x.append(model)
                 line_data_y.append(rank_1_pct)
 
-        # Create line plot on second y-axis with vivid styling
+        # Plot rank-1 percentage as prominent line overlay
         line_positions = range(len(models_sorted))
         ax2.plot(
             line_positions,
@@ -136,45 +225,52 @@ def create_violin_plot(
             label="Rank-1 %",
         )
 
-        # Align y-axes: 100% should align with rank 1 (top), 0% should align with rank 6 (bottom)
+        # Configure secondary y-axis for rank-1 percentage display
         max_rank = violin_df["rank"].max() if len(violin_df) > 0 else len(models_sorted)
         ax2.set_ylim(-20, 110)
         ax2.set_ylabel(r"$\mathbf{P}_{\mathrm{rank1}}$", fontweight="bold", color="crimson")
         ax2.set_yticks(range(0, 101, 20))  # only show 0–100
         ax2.tick_params(axis="y", labelcolor="crimson")
 
-        # Customize plot
+        # =============================================================
+        # PLOT CUSTOMIZATION AND STYLING
+        # =============================================================
+
+        # Configure primary axis (violin plots)
         ax1.set_xlabel("Model", fontweight="bold")
         ax1.set_ylabel(r"$\mathrm{RankScore}$", fontweight="bold")
 
-        # Set x-tick labels to display names
+        # Apply model display names and rotation for readability
         ax1.set_xticklabels([get_display_name(model) for model in models_sorted])
         ax1.tick_params(axis="x", rotation=45)
 
-        # Invert y-axis so rank 1 (best) is at the top
+        # Invert y-axis: rank 1 (best) at top, higher ranks at bottom
         ax1.invert_yaxis()
 
-        # Set y-axis ticks to integer ranks
+        # Configure rank axis with integer ticks and appropriate limits
         max_rank = violin_df["rank"].max() if len(violin_df) > 0 else len(models_sorted)
         ax1.set_ylim(max_rank + 1, 0.5)
         ax1.set_yticks(range(1, max_rank + 1))
 
-        # Add grid for better readability
+        # Enable grid for easier rank reading
         ax1.grid(True, alpha=0.3, axis="y")
 
-        # Create legend with model colors and line plot
+        # =============================================================
+        # LEGEND CREATION AND LAYOUT
+        # =============================================================
+
+        # Build comprehensive legend including models and rank-1 percentage
         legend_elements = []
         for i, model in enumerate(models_sorted):
             color = model_colors[i]
             legend_elements.append(Line2D([0], [0], color=color, lw=4, label=get_display_name(model)))
 
-        # Add line plot to legend
+        # Include rank-1 percentage line in legend
         legend_elements.append(
             Line2D([0], [0], color="crimson", marker="o", linestyle="-", linewidth=4, markersize=10, label="Rank-1 %")
         )
 
-        # Place legend horizontally across the bottom within the figure area in two long rows
-        # Calculate columns for exactly 2 rows
+        # Configure legend layout: horizontal arrangement in two rows
         ncols_for_two_rows = (len(legend_elements) + 1) // 2  # Ceiling division for 2 rows
 
         ax1.legend(
@@ -195,12 +291,16 @@ def create_violin_plot(
             handletextpad=0.5,  # Less padding between marker and text
         )
 
-        # Remove summary statistics text as requested
+        # Note: Summary statistics removed per user preferences
 
-        # Use tight layout since legend is now within the figure area
+        # Apply layout optimization
         plt.tight_layout()
 
-        # Save plot
+        # =============================================================
+        # OUTPUT AND CLEANUP
+        # =============================================================
+
+        # Export violin plot as high-resolution PDF
         filename = f"violin_{scenario_category}_{scenario}.pdf"
         save_path = output_path / filename
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
@@ -238,12 +338,59 @@ def plot_violin(
     dir_nmse_analysis: Path,
     dir_output: Path | None = None,
 ) -> None:
-    """Create violin plots for both SE and NMSE analysis results.
+    """Create comprehensive violin plots for both SE and NMSE analysis results.
 
-    Args:
-        dir_se_analysis: Path to SE analysis directory
-        dir_nmse_analysis: Path to NMSE analysis directory
-        dir_output: Output directory. If None, uses default structure
+    This is the main entry point for violin plot generation, orchestrating the
+    creation of rank distribution visualizations for both spectral efficiency
+    and NMSE metrics. It processes analysis results from both metrics and
+    generates organized violin plot outputs.
+
+    The function creates violin plots that reveal:
+        - Model ranking consistency across scenarios
+        - Performance distribution patterns
+        - Frequency of achieving top rankings
+        - Comparative model reliability
+
+    Parameters
+    ----------
+    ----------\n    dir_se_analysis : Path
+        Directory containing SE analysis results with rank_distributions.csv.
+    dir_nmse_analysis : Path
+        Directory containing NMSE analysis results with rank_distributions.csv.
+    dir_output : Path, optional
+        Output directory for violin plots. If None, uses default structure
+        under DIR_OUTPUTS/testing/vis/violin.
+
+    Output Structure
+    ----------------
+    dir_output/
+    ├── se/                          # SE metric violin plots
+    │   ├── violin_regular_TDD.pdf
+    │   ├── violin_regular_FDD.pdf
+    │   ├── violin_robustness_TDD.pdf
+    │   ├── violin_robustness_FDD.pdf
+    │   ├── violin_generalization_TDD.pdf
+    │   └── violin_generalization_FDD.pdf
+    └── nmse/                        # NMSE metric violin plots
+        ├── violin_regular_TDD.pdf
+        ├── violin_regular_FDD.pdf
+        ├── violin_robustness_TDD.pdf
+        ├── violin_robustness_FDD.pdf
+        ├── violin_generalization_TDD.pdf
+        └── violin_generalization_FDD.pdf
+
+    Notes
+    -----
+    This function provides a comprehensive view of model ranking distributions
+    across all experimental conditions, complementing the numerical tables and
+    line plots with distribution-focused visualizations that reveal performance
+    consistency and reliability patterns.
+
+    The violin plots are particularly useful for:
+    - Identifying models with consistent vs variable performance
+    - Understanding performance ceiling and floor for each model
+    - Comparing ranking distribution shapes across models
+    - Assessing the reliability of model rankings
 
     """
     if dir_output is None:

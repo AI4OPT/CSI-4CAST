@@ -1,4 +1,26 @@
-"""Unified analyzer for consolidated CSI prediction results handling both NMSE and SE analysis."""
+"""Unified analyzer for consolidated CSI prediction results handling both NMSE and SE analysis.
+
+This module provides comprehensive analysis capabilities for CSI (Channel State Information) prediction
+results. It obtain the scenario-wise ranking distribution for each model based on the NMSE and SE metrics.
+
+Key Features:
+- Automatic detection of latest consolidated results
+- Support for both NMSE and SE metric analysis
+- Model ranking and performance comparison
+- Scenario categorization (regular, generalization, robustness)
+- Statistical analysis of rank distributions
+- Comprehensive result saving and reporting
+
+Typical Usage:
+    # Initialize analyzer with latest results
+    analyzer = CSIResultsAnalyzer()
+
+    # Run complete analysis for both metrics
+    analyzer.run_analysis(metric_types=["nmse", "se"], save_results=True)
+
+    # Or analyze specific metric
+    nmse_results = analyzer.analyze_metric("nmse")
+"""
 
 from pathlib import Path
 from typing import Literal
@@ -13,19 +35,31 @@ from src.utils.time_utils import get_current_time, get_latest_datetime_folder
 def get_latest_results_path() -> Path | None:
     """Get the latest consolidated_results.csv from the gather directory.
 
+    This function searches for the most recent timestamped directory in the gather
+    folder and returns the path to its consolidated_results.csv file. This is useful
+    for automatically finding the latest test results without manual specification.
+
     Returns:
         Path to the latest consolidated_results.csv file, or None if not found.
+        Returns None if:
+        - The gather directory doesn't exist
+        - No timestamped directories are found
+        - The consolidated_results.csv file doesn't exist in the latest directory
 
     """
+    # Construct path to the gather directory where consolidated results are stored
     gather_dir = Path(DIR_OUTPUTS) / "testing" / "results" / "gather"
 
+    # Check if gather directory exists
     if not gather_dir.exists():
         return None
 
+    # Find the most recent timestamped directory
     latest_dir = get_latest_datetime_folder(gather_dir)
     if latest_dir is None:
         return None
 
+    # Check if the consolidated results file exists in the latest directory
     results_file = latest_dir / "consolidated_results.csv"
     if not results_file.exists():
         return None
@@ -34,27 +68,56 @@ def get_latest_results_path() -> Path | None:
 
 
 class CSIResultsAnalyzer:
-    """Unified analyzer for consolidated CSI prediction results that handles both NMSE and SE analysis."""
+    """Unified analyzer for consolidated CSI prediction results that handles both NMSE and SE analysis.
+
+    This class provides a comprehensive analysis framework for evaluating CSI prediction model
+    performance across different metrics (NMSE and SE), scenarios, and conditions. It handles
+    data loading, preprocessing, ranking calculations, and statistical analysis.
+
+    The analyzer processes consolidated results from multiple test runs and provides:
+    - Model performance rankings across different scenarios
+    - Statistical distributions of model ranks
+    - Categorization of test scenarios (regular, generalization, robustness)
+    - Comprehensive reporting and visualization support
+
+    Attributes:
+        df_raw (pd.DataFrame): Raw consolidated results DataFrame
+        available_models (list): List of available model names from the data
+
+    """
 
     def __init__(self, results_path: Path | None = None):
-        """Initialize the analyzer.
+        """Initialize the analyzer with consolidated results data.
+
+        Loads the consolidated results CSV file and extracts basic information about
+        available models, scenarios, and test conditions. If no path is provided,
+        automatically finds and uses the latest available results.
 
         Args:
-            results_path: Path to consolidated_results.csv. If None, uses latest results.
+            results_path: Path to consolidated_results.csv. If None, automatically
+                         finds and uses the latest results from the gather directory.
+
+        Raises:
+            ValueError: If no results path is provided and no latest results are found,
+                       or if the specified results file doesn't exist.
 
         """
+        # Auto-detect latest results if no path provided
         if results_path is None:
             results_path = get_latest_results_path()
 
+        # Validate that we have a valid results path
         if results_path is None:
             raise ValueError("No results path provided and no latest results found")
 
+        # Load the consolidated results CSV file
         print(f"Loading results from: {results_path}")
         self.df_raw = pd.read_csv(results_path)
 
-        # Extract available models from data
+        # Extract and store available models for later use in analysis
         self.available_models = sorted(self.df_raw["model"].unique())
 
+        # Print summary information about the loaded data
         print(f"Loaded {len(self.df_raw)} records")
         print(f"Available models: {self.available_models}")
         print(f"Available channels: {sorted(self.df_raw['cm'].unique())}")
@@ -66,7 +129,21 @@ class CSIResultsAnalyzer:
         print(f"Available pred_steps: {sorted(self.df_raw['pred_step'].unique())}")
 
     def _validate_columns(self, metric_type: Literal["nmse", "se"]):
-        """Validate that required columns exist for the specified metric type."""
+        """Validate that required columns exist for the specified metric type.
+
+        Checks that all necessary columns are present in the raw DataFrame for
+        performing analysis on the specified metric type (NMSE or SE).
+
+        Args:
+            metric_type: Either "nmse" or "se" to specify which metric to validate.
+
+        Returns:
+            str: The name of the main metric column ("nmse_mean" or "se_mean")
+
+        Raises:
+            ValueError: If any required columns are missing from the DataFrame.
+
+        """
         base_columns = ["model", "cm", "ds", "ms", "is_gen", "scenario", "noise_type", "noise_degree", "pred_step"]
 
         if metric_type == "nmse":

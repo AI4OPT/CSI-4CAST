@@ -1,4 +1,33 @@
-"""Radar plot visualization for combined SE and NMSE analysis results."""
+"""Radar plot visualization for combined SE and NMSE analysis results.
+
+This module creates comprehensive radar plots that combine multiple performance
+dimensions into a single visualization, allowing for holistic model comparison
+across computational efficiency and prediction accuracy metrics.
+
+Key Features:
+    - Multi-dimensional performance visualization (SE, NMSE, computational metrics)
+    - Automatic data scaling and normalization for fair comparison
+    - Smart legend positioning and color coding
+    - Support for both FDD and TDD scenarios
+    - Offset capability to avoid center clustering
+
+Radar Plot Dimensions:
+    Performance Metrics (rank-based):
+        - SE Generalization: Out-of-distribution spectral efficiency performance
+        - NMSE Generalization: Out-of-distribution NMSE performance
+        - SE Regular: In-distribution spectral efficiency performance
+        - NMSE Regular: In-distribution NMSE performance
+        - SE Robustness: Performance under noise conditions
+        - NMSE Robustness: NMSE under noise conditions
+
+    Computational Metrics (efficiency-based):
+        - FLOPs: Computational complexity (lower is better)
+        - Inference Speed: Processing time (lower is better)
+        - Total Params: Model size (lower is better)
+
+The radar visualization enables identification of models that achieve optimal
+trade-offs between prediction accuracy and computational efficiency.
+"""
 
 from math import pi
 from pathlib import Path
@@ -10,6 +39,11 @@ from src.utils.dirs import DIR_OUTPUTS
 from src.utils.vis_utils import get_display_name, plt_styles, set_plot_style, vis_config
 
 
+# =============================================================================
+# MAIN RADAR PLOT CREATION FUNCTIONS
+# =============================================================================
+
+
 def create_combined_radar_plot(
     dir_computational_overhead: Path,
     dir_se_analysis: Path,
@@ -18,51 +52,98 @@ def create_combined_radar_plot(
     figsize: tuple = vis_config["figsize_single"],
     is_offset: bool = True,
 ) -> None:
-    """Create combined radar plots comparing model performance across SE, NMSE, and computational metrics.
+    """Create comprehensive radar plots combining performance and computational metrics.
 
-    Args:
-        dir_computational_overhead: Directory containing computational_overhead.csv
-        dir_se_analysis: Directory containing SE rank distribution CSV files
-        dir_nmse_analysis: Directory containing NMSE rank distribution CSV files
-        output_dir: Directory to save plots. If None, saves in se_nmse_radar directory
-        figsize: Figure size for the plots
-        is_offset: Whether to apply offset to avoid center clustering (default: True)
+    This function generates radar plots that provide a holistic view of model performance
+    by combining accuracy metrics (SE, NMSE) across different scenarios with computational
+    efficiency metrics (FLOPs, inference time, parameters). This enables identification
+    of models with optimal accuracy-efficiency trade-offs.
+
+    Data Integration Process:
+        1. Load computational overhead data (FLOPs, inference time, parameters)
+        2. Load SE rank distributions across scenarios (regular, robustness, generalization)
+        3. Load NMSE rank distributions across scenarios
+        4. Normalize and scale all metrics for fair comparison
+        5. Generate radar plots for FDD and TDD scenarios separately
+
+    Scaling Strategy:
+        - Performance metrics: Convert ranks to scores (higher = better)
+        - Computational metrics: Convert to improvement percentages (higher = more efficient)
+        - Apply offset to prevent center clustering for better visualization
+
+    Parameters
+    ----------
+    dir_computational_overhead : Path
+        Directory containing computational_overhead.csv with model efficiency metrics.
+    dir_se_analysis : Path
+        Directory containing SE rank distribution CSV files from analysis pipeline.
+    dir_nmse_analysis : Path
+        Directory containing NMSE rank distribution CSV files from analysis pipeline.
+    output_dir : Path, optional
+        Directory to save radar plots. If None, uses default output structure.
+    figsize : tuple, default=vis_config["figsize_single"]
+        Figure size (width, height) for the radar plots.
+    is_offset : bool, default=True
+        Whether to apply offset to radar values to avoid center clustering,
+        improving visualization clarity.
+
+    Notes
+    -----
+    The function creates separate radar plots for FDD and TDD scenarios since
+    these represent different communication modes with potentially different
+    performance characteristics. Models are compared across 9 dimensions:
+    - 6 performance dimensions (SE/NMSE x regular/robustness/generalization)
+    - 3 computational dimensions (FLOPs/inference time/parameters)
+
+    Output files are saved as PDF with high resolution (300 DPI) for publication use.
 
     """
-    # Load computational overhead data
+    # =================================================================
+    # DATA LOADING AND PREPARATION
+    # =================================================================
+
+    # Load computational efficiency metrics
     overhead_path = dir_computational_overhead / "computational_overhead.csv"
     overhead_df = pd.read_csv(overhead_path)
 
-    # Load SE rank distribution data (find latest timestamp folder)
+    # Load spectral efficiency performance rankings
     se_rank_path = dir_se_analysis / "rank_distributions.csv"
     se_rank_df = pd.read_csv(se_rank_path)
     se_rank_df["metric_type"] = "SE"
 
-    # Load NMSE rank distribution data (find latest timestamp folder)
+    # Load NMSE performance rankings
     nmse_rank_path = dir_nmse_analysis / "rank_distributions.csv"
     nmse_rank_df = pd.read_csv(nmse_rank_path)
     nmse_rank_df["metric_type"] = "NMSE"
 
-    # Create output directory
+    # Set up output directory structure
     if output_dir is None:
         output_dir = Path(DIR_OUTPUTS) / "testing" / "vis" / "radar"
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Get unique models (exclude NP model)
+    # Identify models present in both SE and NMSE data
     se_models = set(se_rank_df["model"].unique())
     nmse_models = set(nmse_rank_df["model"].unique())
-    models = sorted([model for model in (se_models & nmse_models) if model != "NP"])
+    models = sorted(list(se_models & nmse_models))
 
-    # Process data for each scenario (FDD and TDD)
+    # =================================================================
+    # SCENARIO-SPECIFIC RADAR PLOT GENERATION
+    # =================================================================
+
+    # Generate separate radar plots for each communication scenario
     scenarios = ["FDD", "TDD"]
 
     for scenario in scenarios:
-        # Filter data for this scenario
+        # Extract scenario-specific data from all sources
         scenario_se_df = se_rank_df[se_rank_df["scenario"] == scenario].copy()
         scenario_nmse_df = nmse_rank_df[nmse_rank_df["scenario"] == scenario].copy()
         scenario_overhead_df = overhead_df[overhead_df["Scenario"] == scenario].copy()
 
-        # Calculate metrics for each model
+        # =============================================================
+        # MODEL-SPECIFIC METRIC EXTRACTION AND PROCESSING
+        # =============================================================
+
+        # Process each model's performance across all dimensions
         radar_data = {}
 
         for model in models:
@@ -73,48 +154,52 @@ def create_combined_radar_plot(
 
             model_data = {}
 
-            # Extract computational metrics
+            # Get computational efficiency metrics
             gflops = model_overhead["GFLOPS"].iloc[0]  # type: ignore
             inference_time = model_overhead["Inference_Time_Avg_ms"].iloc[0]  # type: ignore
             total_params = model_overhead["Total_Params"].iloc[0]  # type: ignore
 
-            # Get SE performance metrics
+            # Extract SE performance across scenario categories
             se_model_data = scenario_se_df[scenario_se_df["model"] == model]
             se_regular = se_model_data[se_model_data["scenario_category"] == "regular"]
             se_robust = se_model_data[se_model_data["scenario_category"] == "robustness"]
             se_gen = se_model_data[se_model_data["scenario_category"] == "generalization"]
 
-            # Get NMSE performance metrics
+            # Extract NMSE performance across scenario categories
             nmse_model_data = scenario_nmse_df[scenario_nmse_df["model"] == model]
             nmse_regular = nmse_model_data[nmse_model_data["scenario_category"] == "regular"]
             nmse_robust = nmse_model_data[nmse_model_data["scenario_category"] == "robustness"]
             nmse_gen = nmse_model_data[nmse_model_data["scenario_category"] == "generalization"]
 
-            # Store computational metrics
+            # Store raw computational efficiency values
             model_data["gflops"] = gflops
             model_data["inference_time"] = inference_time
             model_data["total_params"] = total_params
 
-            # Store SE mean ranks
+            # Store SE performance rankings (lower rank = better performance)
             model_data["se_regular_mean_rank"] = se_regular["mean_rank"].iloc[0]  # type: ignore
             model_data["se_robust_mean_rank"] = se_robust["mean_rank"].iloc[0]  # type: ignore
             model_data["se_gen_mean_rank"] = se_gen["mean_rank"].iloc[0]  # type: ignore
 
-            # Store NMSE mean ranks
+            # Store NMSE performance rankings (lower rank = better performance)
             model_data["nmse_regular_mean_rank"] = nmse_regular["mean_rank"].iloc[0]  # type: ignore
             model_data["nmse_robust_mean_rank"] = nmse_robust["mean_rank"].iloc[0]  # type: ignore
             model_data["nmse_gen_mean_rank"] = nmse_gen["mean_rank"].iloc[0]  # type: ignore
 
             radar_data[model] = model_data
 
-        # Remove models with missing data
+        # Filter out models with incomplete data across all metrics
         radar_data = {k: v for k, v in radar_data.items() if not any(pd.isna(val) for val in v.values())}
 
         if not radar_data:
             print(f"No valid data for scenario {scenario}, skipping...")
             continue
 
-        # Calculate percentage improvements for computational metrics
+        # =============================================================
+        # METRIC NORMALIZATION AND SCALING
+        # =============================================================
+
+        # Convert computational metrics to improvement percentages
         gflops_values = [data["gflops"] for data in radar_data.values()]
         inference_time_values = [data["inference_time"] for data in radar_data.values()]
         total_params_values = [data["total_params"] for data in radar_data.values()]
@@ -123,19 +208,19 @@ def create_combined_radar_plot(
         max_inference_time = max(inference_time_values)
         max_total_params = max(total_params_values)
 
-        # Create final data for radar plot
+        # Transform all metrics to radar plot scale (higher values = better)
         radar_plot_data = {}
         n_models = len(radar_data) + 1
 
         for model in radar_data:
             data = radar_data[model]
 
-            # Computational metrics: percentage improvement scaled by (num_models - 1)
+            # Efficiency metrics: scale improvement percentages to radar range
             gflops_improvement = (max_gflops - data["gflops"]) / max_gflops * (n_models - 1)
             inference_improvement = (max_inference_time - data["inference_time"]) / max_inference_time * (n_models - 1)
             total_params_improvement = (max_total_params - data["total_params"]) / max_total_params * (n_models - 1)
 
-            # Performance metrics: use num_models - mean_rank (smaller rank = better = higher value)
+            # Performance metrics: convert ranks to scores (lower rank → higher score)
             se_regular_score = n_models - data["se_regular_mean_rank"]
             se_robust_score = n_models - data["se_robust_mean_rank"]
             se_gen_score = n_models - data["se_gen_mean_rank"]
@@ -156,7 +241,11 @@ def create_combined_radar_plot(
                 "NMSE_Robustness": nmse_robust_score,
             }
 
-        # Create radar plot
+        # =============================================================
+        # RADAR PLOT GENERATION
+        # =============================================================
+
+        # Generate the actual radar visualization
         _create_combined_radar_plot(
             radar_plot_data,
             scenario,
@@ -324,14 +413,38 @@ def plot_radar(
     output_dir: Path | None = None,
     is_offset: bool = True,
 ) -> None:
-    """Create combined SE and NMSE radar plots.
+    """Create comprehensive radar plots combining SE, NMSE, and computational metrics.
 
-    Args:
-        dir_computational_overhead: Directory containing computational_overhead.csv
-        dir_se_analysis: Directory containing SE rank distribution CSV files
-        dir_nmse_analysis: Directory containing NMSE rank distribution CSV files
-        output_dir: Directory to save plots. If None, saves in se_nmse_radar directory
-        is_offset: Whether to apply offset to avoid center clustering (default: True)
+    This is the main entry point for radar plot generation, orchestrating the
+    creation of multi-dimensional performance visualizations that enable holistic
+    model comparison across accuracy and efficiency dimensions.
+
+    The function serves as a high-level interface that calls create_combined_radar_plot()
+    with the provided parameters, handling default directory resolution and ensuring
+    consistent radar plot generation across the analysis pipeline.
+
+    Parameters
+    ----------
+    dir_computational_overhead : Path
+        Directory containing computational_overhead.csv with model efficiency data.
+    dir_se_analysis : Path
+        Directory containing SE analysis results and rank distributions.
+    dir_nmse_analysis : Path
+        Directory containing NMSE analysis results and rank distributions.
+    output_dir : Path, optional
+        Output directory for radar plots. If None, uses default structure.
+    is_offset : bool, default=True
+        Whether to apply offset to radar values to prevent center clustering.
+
+    Notes
+    -----
+    This function creates radar plots for both FDD and TDD scenarios, providing
+    a comprehensive view of model performance across multiple dimensions:
+    - Performance accuracy (SE/NMSE across different test conditions)
+    - Computational efficiency (FLOPs, inference time, model parameters)
+
+    The resulting visualizations enable identification of models with optimal
+    trade-offs between prediction accuracy and computational efficiency.
 
     """
     create_combined_radar_plot(

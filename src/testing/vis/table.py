@@ -1,3 +1,31 @@
+"""Performance table generation for model analysis.
+
+This module creates comprehensive performance tables that present model rankings
+and performance metrics in tabular format for easy comparison and analysis.
+It supports both channel model and delay spread analysis across regular and
+generalization conditions.
+
+Key Features:
+    - Channel model performance tables (A, C, D vs B, E)
+    - Delay spread performance tables (regular vs generalization ranges)
+    - Support for both SE and NMSE metrics
+    - Automatic ranking and average calculations
+    - Formatted output for both display and export
+    - Separate analysis for TDD and FDD scenarios
+
+Table Types:
+    - se_cm: Spectral Efficiency across Channel Models
+    - se_ds: Spectral Efficiency across Delay Spreads
+    - nmse_cm: NMSE across Channel Models
+    - nmse_ds: NMSE across Delay Spreads
+
+Each table provides:
+    - Individual condition performance values
+    - Regular vs Generalization averages
+    - Model rankings within each category
+    - Statistical summaries and comparisons
+"""
+
 from pathlib import Path
 from typing import Literal
 
@@ -157,14 +185,14 @@ def create_scenario_table_ds(
         for ds in regular_ds:
             display_name = ds_mapping[ds]
             row_data[f"{display_name} (Regular)"] = (
-                f"{table.loc[model, ds]:.3f}" if not pd.isna(table.loc[model, ds]) else "N/A"
+                f"{table.loc[model, ds]:.3f}" if not pd.isna(table.loc[model, ds]) else "N/A"  # type: ignore the pandas isna
             )
 
         # Add generalization delay spread performance
         for ds in generalization_ds:
             display_name = ds_mapping[ds]
             row_data[f"{display_name} (Generalization)"] = (
-                f"{table.loc[model, ds]:.3f}" if not pd.isna(table.loc[model, ds]) else "N/A"
+                f"{table.loc[model, ds]:.3f}" if not pd.isna(table.loc[model, ds]) else "N/A"  # type: ignore the pandas isna
             )
 
         # Add averages
@@ -385,7 +413,48 @@ def plot_table(
     path_consolidated_results: Path,
     output_dir: Path,
 ) -> None:
-    """Plot performance tables for different metric and grouping combinations."""
+    """Generate comprehensive performance tables for all metric and grouping combinations.
+
+    This is the main entry point for table generation, creating a complete set of
+    performance comparison tables covering both SE and NMSE metrics across channel
+    model and delay spread dimensions. It orchestrates the creation of all table
+    types with consistent formatting and organization.
+
+    Generated Tables:
+        - SE Channel Model tables (se_cm): Performance across channel models A-E
+        - SE Delay Spread tables (se_ds): Performance across delay spread ranges
+        - NMSE Channel Model tables (nmse_cm): NMSE across channel models A-E
+        - NMSE Delay Spread tables (nmse_ds): NMSE across delay spread ranges
+
+    Each table type includes:
+        - TDD and FDD scenario variants
+        - Regular vs generalization comparisons
+        - Model rankings and statistical summaries
+        - Formatted CSV exports and text reports
+
+    Parameters
+    ----------
+    path_consolidated_results : Path
+        Path to consolidated_results.csv containing all experimental data.
+    output_dir : Path
+        Root output directory for table organization.
+
+    Output Structure
+    ----------------
+    output_dir/
+    ├── se_cm/           # SE across channel models
+    ├── se_ds/           # SE across delay spreads
+    ├── nmse_cm/         # NMSE across channel models
+    └── nmse_ds/         # NMSE across delay spreads
+
+    Notes
+    -----
+    This function provides a comprehensive tabular analysis complement to the
+    graphical visualizations, enabling detailed numerical comparison of model
+    performance across different experimental dimensions. Tables are formatted
+    for both human readability and further statistical analysis.
+
+    """
     dir_se_cm = output_dir / "se_cm"
     dir_se_cm.mkdir(parents=True, exist_ok=True)
     dir_se_ds = output_dir / "se_ds"

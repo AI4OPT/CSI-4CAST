@@ -5,7 +5,7 @@ testing of CSI prediction models. It defines testing scenarios, model lists, noi
 configurations, and job allocation settings for distributed testing on HPC clusters.
 
 Key Components:
-- Model configurations: List of models to test (MODEL, LLM4CP, CNN, RNN, NP, STEMGNN)
+- Model configurations: List of models to test (RNN, NP)
 - Scenario configurations: TDD and FDD testing scenarios
 - Noise configurations: Various noise types (phase, burst, vanilla, packagedrop)
 - Job allocation: SLURM array job configuration for parallel testing
@@ -44,13 +44,17 @@ from src.utils.data_utils import (
 
 
 # Model configurations
-LIST_MODELS = ["MODEL", "LLM4CP", "CNN", "RNN", "NP", "STEMGNN"]  # Consistent order for testing
+LIST_MODELS = ["RNN", "NP"]  # Consistent order for testing
 
 # Scenario and noise configurations
 LIST_SCENARIOS = ["TDD", "FDD"]
 LIST_NOISE_TYPES = ["phase", "burst", "vanilla", "packagedrop"]
 
 # Testing configurations
+# Batch size for testing dataloader - controls memory usage during inference
+# Set to 1 for conservative memory usage on resource-constrained devices
+# Can be increased (e.g., 8, 16, 32) on devices with more GPU/CPU memory
+# to improve testing throughput, but ensure it doesn't exceed device memory limits
 BATCH_SIZE = 1
 
 # Array job configurations

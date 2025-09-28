@@ -1,4 +1,32 @@
-import datetime
+"""Results gathering module for CSI prediction testing experiments.
+
+This module provides functionality to gather and consolidate test results from
+multiple sources (cluster slices and local full tests) based on completion status.
+It handles the complexity of determining which data source to use for each model
+and consolidates results into a unified DataFrame for analysis.
+
+Key Features:
+- Intelligent source selection based on completion status
+- Support for both cluster slice and local full_test data sources
+- Array string parsing and flattening for prediction step data
+- Consolidated CSV output with comprehensive metadata
+- Data validation and error handling
+- Summary statistics generation
+
+Typical Usage:
+    # Get completion status first
+    completion_result = check_testing_completion()
+
+    # Gather results based on completion status
+    consolidated_df = gather_all_results(
+        model_completion=completion_result['model_completion'],
+        verbose=True
+    )
+
+    # Save consolidated results
+    save_path = save_consolidated_results(consolidated_df)
+"""
+
 from pathlib import Path
 
 import numpy as np
@@ -15,15 +43,38 @@ def gather_all_results(
     verbose: bool = True,
 ) -> pd.DataFrame:
     """Gather results based on model completion status.
-    For each model, use the appropriate data source (slice or full_test) based on completion status.
+
+    This is the main function for intelligently gathering test results from multiple
+    sources. For each model, it determines the best data source (cluster slices vs
+    local full_test) based on completion status and timestamp information, then
+    consolidates all results into a unified DataFrame.
+
+    The function handles the complexity of:
+    - Choosing between slice and full_test data sources per model
+    - Loading data from multiple timestamp directories
+    - Adding metadata columns for traceability
+    - Handling missing or corrupted files gracefully
+    - Providing detailed progress reporting
 
     Args:
-        model_completion: Dictionary from check_testing_completion containing completion status
+        model_completion: Dictionary from check_testing_completion() containing:
+            - model_complete: Whether the model has completed testing
+            - use_source: Which data source to use ("slice" or "full_test")
+            - Timestamp information for decision making
         base_prediction_performance: Path to the base testing results directory
-        verbose: Whether to print detailed information
+                                   Expected structure: base_dir/MODEL_NAME/slice_X/ or full_test/
+        verbose: Whether to print detailed progress information
 
     Returns:
-        Consolidated DataFrame with results from appropriate sources
+        pd.DataFrame: Consolidated DataFrame with results from all completed models.
+                     Contains original test result columns plus metadata:
+                     - model_name: Name of the source model
+                     - slice_number: Slice number or "full_test"
+                     - timestamp: Directory timestamp of the data source
+                     - data_source: "slice" or "full_test"
+
+    Raises:
+        ValueError: If no valid result files are found from completed models
 
     """
     all_dataframes = []
@@ -118,7 +169,38 @@ def gather_all_results(
 
 
 def parse_array_string(df: pd.DataFrame, list_columns: list[str]) -> pd.DataFrame:
-    # Parse string representations of arrays in specified columns.
+    """Parse string representations of arrays in specified columns and flatten by prediction steps.
+
+    This function handles the conversion of array-like string columns (e.g., "[1.2 3.4 5.6]")
+    into individual rows for each prediction step. This is essential for proper analysis
+    of time-series prediction results where each prediction step needs to be analyzed separately.
+
+    The function:
+    1. Parses string representations of numpy arrays back to actual arrays
+    2. Creates separate rows for each prediction step
+    3. Preserves all other columns from the original DataFrame
+    4. Adds a 'pred_step' column indicating the prediction step index
+
+    Args:
+        df: Input DataFrame with array string columns
+        list_columns: List of column names containing array strings to parse
+                     (e.g., ["nmse_mean", "nmse_std", "se_mean", "se_std"])
+
+    Returns:
+        pd.DataFrame: Flattened DataFrame where each row represents one prediction step
+                     from one test combination. The DataFrame will have more rows than
+                     the input (multiplied by the number of prediction steps).
+
+    Example:
+        Input row: {"model": "A", "nmse_mean": "[0.1 0.2 0.3 0.4]", "scenario": "TDD"}
+        Output rows:
+            {"model": "A", "nmse_mean": 0.1, "scenario": "TDD", "pred_step": 0}
+            {"model": "A", "nmse_mean": 0.2, "scenario": "TDD", "pred_step": 1}
+            {"model": "A", "nmse_mean": 0.3, "scenario": "TDD", "pred_step": 2}
+            {"model": "A", "nmse_mean": 0.4, "scenario": "TDD", "pred_step": 3}
+
+    """
+    # Parse string representations of arrays in specified columns
     for column in list_columns:
         df[column] = df[column].apply(lambda x: np.fromstring(x.strip("[]"), sep=" "))  # type: ignore
     # flatten the arrays to ensure they are 1D
@@ -135,11 +217,24 @@ def parse_array_string(df: pd.DataFrame, list_columns: list[str]) -> pd.DataFram
 
 
 def save_consolidated_results(df: pd.DataFrame, output_dir: Path = Path(DIR_OUTPUTS) / "testing" / "results"):
-    """Save the consolidated DataFrame to a CSV file.
+    """Save the consolidated DataFrame to a CSV file with timestamped directory.
+
+    This function saves the consolidated results to a CSV file in a structured
+    directory format. It creates the necessary directory structure and provides
+    a standardized location for downstream analysis tools to find the results.
 
     Args:
-        df: Consolidated DataFrame
-        output_dir: Path to save the CSV file
+        df: Consolidated DataFrame containing all gathered test results
+        output_dir: Base directory path to save the CSV file. The actual file
+                   will be saved as output_dir/consolidated_results.csv
+
+    Returns:
+        Path: Full path to the saved CSV file
+
+    Side Effects:
+        - Creates the output directory if it doesn't exist
+        - Overwrites any existing consolidated_results.csv file
+        - Prints confirmation message with save location
 
     """
     output_dir.mkdir(parents=True, exist_ok=True)

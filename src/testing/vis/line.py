@@ -1,7 +1,23 @@
 """Unified line plotting module for both NMSE and SE visualizations.
 
-This module combines the functionality from line_nmse.py and line_se.py,
-preserving all the detailed settings for broken axis and figure sizing.
+This module provides comprehensive line plotting functionality for model
+performance analysis. It combines NMSE and SE visualization capabilities with
+advanced features including:
+
+- Broken axis support for handling large performance gaps (e.g., NP vs other models)
+- Automatic legend positioning to avoid data overlap
+- Generalization background highlighting for delay spread and speed analysis
+- Support for multiple variable types (channel model, delay spread, speed, etc.)
+- Consistent styling and formatting across all plots
+
+Key Features:
+    - Handles both regular and broken axis layouts automatically
+    - Smart y-axis scaling (log for NMSE, linear for SE)
+    - Background coloring for generalization vs regular ranges
+    - Automatic tick formatting and positioning
+
+Output Structure:
+- z_artifacts/outputs/testing/vis/[date_time]/line/
 """
 
 from pathlib import Path
@@ -25,7 +41,11 @@ from src.utils.vis_utils import (
 )
 
 
-# Constants
+# =============================================================================
+# CONSTANTS AND CONFIGURATION
+# =============================================================================
+
+# Mapping from variable names to their display labels for axes
 VAR_NAME_TO_LABEL = {
     "cm": "Channel Model",
     "ds": "Delay Spread (ns)",
@@ -35,21 +55,40 @@ VAR_NAME_TO_LABEL = {
 
 
 def aggregate_mean_std(df_group, mean_col: str, std_col: str):
-    """Given a group of rows with per-row mean and std, compute the overall mean and correct std.
+    """Aggregate per-row means and standard deviations into overall statistics.
+
+    This function properly handles the aggregation of multiple measurements where each
+    row contains a mean and standard deviation. It computes the overall mean and
+    the correct combined standard deviation using the formula for combining
+    independent samples with known means and standard deviations.
+
+    Mathematical Background:
+        For samples with means μᵢ and standard deviations σᵢ:
+        - Overall mean: μ = Σμᵢ / n
+        - Overall variance: σ² = Σ(σᵢ² + (μᵢ - μ)²) / n
+        - Overall std: std = √σ²
 
     Parameters
     ----------
     df_group : pd.DataFrame
-        A subset of the full dataframe.
+        A grouped subset of the dataframe containing multiple rows with
+        individual means and standard deviations to aggregate.
     mean_col : str
-        Column name for the means.
+        Name of the column containing individual means.
     std_col : str
-        Column name for the stds.
+        Name of the column containing individual standard deviations.
 
     Returns
     -------
     pd.Series
-        Aggregated mean and std as a pandas Series.
+        Series with aggregated statistics:
+        - '{mean_col}_agg': Overall mean across all rows
+        - '{std_col}_agg': Properly computed overall standard deviation
+
+    Notes
+    -----
+    This is crucial for properly combining results from multiple experimental
+    runs or conditions, ensuring statistical validity of the aggregated metrics.
 
     """
     means = df_group[mean_col].values
@@ -63,7 +102,35 @@ def aggregate_mean_std(df_group, mean_col: str, std_col: str):
 
 
 def _log_plain_formatter(y, _pos):
-    """Format log scale ticks as plain decimals without scientific notation."""
+    """Format logarithmic scale tick labels as plain decimal numbers.
+
+    This formatter prevents matplotlib from using scientific notation (e.g., 1e-2)
+    on log scale axes, instead displaying clean decimal numbers (e.g., 0.01).
+    This improves readability of performance metrics like NMSE values.
+
+    Parameters
+    ----------
+    y : float
+        The tick value to format.
+    _pos : int
+        Tick position (unused, required by matplotlib formatter interface).
+
+    Returns
+    -------
+    str
+        Formatted tick label as plain decimal string, with trailing zeros
+        and decimal points removed for cleaner appearance.
+
+    Examples
+    --------
+    >>> _log_plain_formatter(0.01, 0)
+    '0.01'
+    >>> _log_plain_formatter(0.1000, 0)
+    '0.1'
+    >>> _log_plain_formatter(1.0, 0)
+    '1'
+
+    """
     if y == 0 or np.isnan(y):
         return "0"
     # print as plain decimal (no scientific), trim trailing zeros
@@ -71,7 +138,31 @@ def _log_plain_formatter(y, _pos):
 
 
 def get_xlabel(df: pd.DataFrame, var_1: str) -> str:
-    """Get the appropriate x-axis label based on variable and data."""
+    """Generate appropriate x-axis label based on the plotted variable and data context.
+
+    This function provides context-aware labeling, particularly for noise_degree
+    variables where the label depends on the type of noise being analyzed.
+
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame containing the data being plotted.
+    var_1 : str
+        The variable being plotted on the x-axis (e.g., 'cm', 'ds', 'ms', 'noise_degree').
+
+    Returns
+    -------
+    str
+        Human-readable label for the x-axis.
+
+    Examples
+    --------
+    For noise_degree with packagedrop noise: returns "Missing Probability"
+    For noise_degree with phase noise: returns "SNR"
+    For 'cm': returns "Channel Model"
+    For 'ds': returns "Delay Spread (ns)"
+
+    """
     if var_1 == "noise_degree":
         noise_type = df["noise_type"].unique()[0]
         return "Missing Probability" if noise_type == "packagedrop" else "SNR"
@@ -80,7 +171,30 @@ def get_xlabel(df: pd.DataFrame, var_1: str) -> str:
 
 
 def setup_axis_ticks(ax, df: pd.DataFrame, var_1: str):
-    """Set up x-axis ticks based on the variable type."""
+    """Configure x-axis ticks and labels based on the variable type.
+
+    This function handles specialized tick configuration for different variable types,
+    ensuring appropriate spacing, formatting, and limits for each data type.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        The axis object to configure.
+    df : pd.DataFrame
+        DataFrame containing the data being plotted.
+    var_1 : str
+        The variable type being plotted ('cm', 'ds', etc.).
+
+    Notes
+    -----
+    - Channel models ('cm'): Uses alphabetical labels (A, B, C, D, E)
+    - Delay spread ('ds'): Uses nanosecond values with proper spacing and limits
+    - Other variables: Uses default matplotlib behavior
+
+    The function automatically adjusts axis limits and tick positions to provide
+    optimal visualization for each data type.
+
+    """
     if var_1 == "cm":
         cm_order = sorted(df["cm"].unique().tolist())
         cm_order = ["A", "B", "C", "D"] if len(cm_order) == 3 else ["A", "B", "C", "D", "E"]
@@ -97,14 +211,39 @@ def setup_axis_ticks(ax, df: pd.DataFrame, var_1: str):
 
 
 def should_use_broken_axis(df_agg: pd.DataFrame, gap_threshold: float = 2) -> bool:
-    """Determine if we should use a broken axis based on the gap between NP and other models.
+    """Automatically determine whether to use broken axis layout based on data characteristics.
 
-    Args:
-        df_agg: Aggregated dataframe with model performance data
-        gap_threshold: Minimum gap ratio to trigger broken axis (default: 2x difference)
+    This function analyzes the performance gap between the NP (No Prediction) baseline
+    and other models to decide if a broken axis visualization would be beneficial.
+    A broken axis is useful when one model (typically NP) performs significantly
+    worse than others, making it difficult to see differences between the better models.
 
-    Returns:
-        True if broken axis should be used
+    Algorithm:
+        1. Check if NP model exists in the data
+        2. Find minimum NP performance and maximum other model performance
+        3. Calculate the ratio between these values
+        4. Use broken axis if ratio exceeds the threshold
+
+    Parameters
+    ----------
+    df_agg : pd.DataFrame
+        Aggregated dataframe containing model performance data with 'model' and
+        'obj_mean_agg' columns.
+    gap_threshold : float, default=2
+        Minimum performance ratio to trigger broken axis. A value of 2 means
+        NP must perform at least 2x worse than the best other model.
+
+    Returns
+    -------
+    bool
+        True if broken axis layout should be used, False for regular single axis.
+
+    Notes
+    -----
+    This automatic detection helps create more readable plots by:
+    - Avoiding compressed scales when one model is much worse
+    - Maintaining detail visibility for competitive models
+    - Only using broken axis when truly beneficial
 
     """
     if "NP" not in df_agg["model"].unique():
@@ -349,8 +488,38 @@ def add_generalization_background(ax, df: pd.DataFrame, var_1: str):
                 )
 
 
+# =============================================================================
+# MAIN VISUALIZATION CLASS
+# =============================================================================
+
+
 class Vis:
-    """Analyzer for consolidated CP testing results."""
+    """Main visualization class for model performance analysis.
+
+    This class provides comprehensive line plotting capabilities for analyzing
+    model performance across different scenarios, metrics, and variables. It handles
+    data filtering, aggregation, and visualization with support for advanced features
+    like broken axes and generalization background highlighting.
+
+    Key Capabilities:
+        - Multi-variable line plots (channel model, delay spread, speed, etc.)
+        - Automatic broken axis detection and layout
+        - Error bar visualization with proper statistical aggregation
+        - Generalization vs regular range highlighting
+        - Consistent styling across all model comparisons
+
+    Attributes
+    ----------
+    df : pd.DataFrame
+        Copy of the input consolidated results dataframe.
+
+    Methods
+    -------
+    get_filtered_data(...) : Filter data based on multiple criteria
+    default_line_plot(...) : Create line plots with full feature support
+    _plot_model_data(...) : Internal method for plotting individual model data
+
+    """
 
     def __init__(self, df: pd.DataFrame):
         """Initialize the visualization analyzer.
@@ -504,7 +673,7 @@ class Vis:
 
         df_agg = (
             df.groupby(group_cols, group_keys=False)
-            .apply(lambda g: aggregate_mean_std(g, mean_col="obj_mean", std_col="obj_std"), include_groups=False)
+            .apply(lambda g: aggregate_mean_std(g, mean_col="obj_mean", std_col="obj_std"), include_groups=False)  # type: ignore the pandas include_groups
             .reset_index()
         )
 

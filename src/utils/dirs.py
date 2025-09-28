@@ -1,4 +1,4 @@
-"""Directory path constants for the CSI-4CAST project.
+"""Directory path constants for the project.
 
 This module defines all the standard directory paths used throughout the project
 for data storage, outputs, model weights, and external dependencies. Using

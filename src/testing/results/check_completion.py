@@ -1,3 +1,28 @@
+"""Testing completion status checker for CSI prediction experiments.
+
+This module provides comprehensive functionality to check the completion status of
+CSI prediction testing jobs. It can analyze both cluster-based slice testing and
+local full testing modes to determine which models have completed their evaluation.
+
+Key Features:
+- Scan cluster slice directories for completion status
+- Scan local full_test directories for completion status
+- Count completed combinations vs expected combinations
+- Generate detailed completion reports with statistics
+- Support for both individual slice analysis and overall model analysis
+- Automatic detection of latest timestamp directories
+
+Typical Usage:
+    # Check completion status with detailed reporting
+    completion_result = check_testing_completion(verbose=True, save_report=True)
+
+    # Check if all models are complete
+    if completion_result['all_complete']:
+        print("All testing is complete!")
+    else:
+        print(f"Incomplete models: {len(completion_result['model_completion'])}")
+"""
+
 from pathlib import Path
 
 import pandas as pd
@@ -15,17 +40,28 @@ from src.utils.time_utils import get_current_time, get_latest_datetime_folder
 def count_completed_combinations(slice_dir: Path) -> int:
     """Count the number of completed combinations in a slice directory.
 
+    This function examines a slice directory to determine how many test combinations
+    have been completed by counting rows in the result.csv file from the most recent
+    timestamp directory. This is used to track progress of cluster-based testing jobs.
+
     Args:
         slice_dir: Path to the slice directory (e.g., testing1/MODEL3/slice_1/)
+                  Expected structure: slice_dir/TIMESTAMP/result.csv
 
     Returns:
-        Number of completed combinations (rows in result.csv)
+        int: Number of completed combinations (rows in result.csv).
+             Returns 0 if:
+             - Directory doesn't exist
+             - No timestamp directories found
+             - No result.csv file found
+             - File is empty or corrupted
 
     """
+    # Check if the slice directory exists
     if not slice_dir.exists():
         return 0
 
-    # Find latest timestamp directory
+    # Find the most recent timestamp directory within the slice
     latest_timestamp_dir = get_latest_datetime_folder(slice_dir)
     if latest_timestamp_dir is None:
         return 0
@@ -46,17 +82,29 @@ def count_completed_combinations(slice_dir: Path) -> int:
 def count_completed_combinations_full_test(full_test_dir: Path) -> int:
     """Count the number of completed combinations in a full_test directory.
 
+    This function examines a full_test directory to determine how many test combinations
+    have been completed by counting rows in the result.csv file from the most recent
+    timestamp directory. This is used to track progress of local full testing jobs.
+
     Args:
-        full_test_dir: Path to the full_test directory (e.g., testing/prediction_performance/MODEL3/full_test/)
+        full_test_dir: Path to the full_test directory
+                      (e.g., testing/prediction_performance/MODEL3/full_test/)
+                      Expected structure: full_test_dir/TIMESTAMP/result.csv
 
     Returns:
-        Number of completed combinations (rows in result.csv)
+        int: Number of completed combinations (rows in result.csv).
+             Returns 0 if:
+             - Directory doesn't exist
+             - No timestamp directories found
+             - No result.csv file found
+             - File is empty or corrupted
 
     """
+    # Check if the full_test directory exists
     if not full_test_dir.exists():
         return 0
 
-    # Find latest timestamp directory
+    # Find the most recent timestamp directory within full_test
     latest_timestamp_dir = get_latest_datetime_folder(full_test_dir)
     if latest_timestamp_dir is None:
         return 0
@@ -77,15 +125,22 @@ def count_completed_combinations_full_test(full_test_dir: Path) -> int:
 def get_expected_combinations_for_slice(slice_idx: int, total_jobs: int) -> int:
     """Get the expected number of combinations for a specific slice.
 
+    This function calculates how many test combinations should be present in a
+    specific slice based on the slice index and total number of jobs. It uses
+    the same slicing logic as the test execution to determine expected counts.
+
     Args:
-        slice_idx: 0-based slice index
-        total_jobs: Total number of jobs per model
+        slice_idx: 0-based slice index (e.g., 0 for slice_1, 1 for slice_2)
+        total_jobs: Total number of jobs per model (JOBS_PER_MODEL)
 
     Returns:
-        Expected number of combinations for this slice
+        int: Expected number of combinations for this slice.
+             This represents how many rows should be in result.csv when complete.
 
     """
+    # Generate all possible test combinations
     all_combinations = create_all_combinations()
+    # Apply slicing logic to get combinations for this specific slice
     sliced_combinations = slice_combinations(all_combinations, (slice_idx, total_jobs))
     return len(sliced_combinations)
 
@@ -95,24 +150,45 @@ def scan_local_completion_status(
 ) -> list[dict]:
     """Scan local mode full_test directories and collect completion status.
 
+    This function examines all model directories for local full_test completion status.
+    It checks for the presence of result.csv files and counts completed combinations
+    to determine the completion percentage and status of each model's full testing.
+
+    Local full_test mode runs all test combinations in a single job, unlike cluster
+    mode which splits combinations across multiple slice jobs.
+
+    Args:
+        base_prediction_performance: Base directory containing model test results.
+                                   Expected structure: base_dir/MODEL_NAME/full_test/
+
     Returns:
-        List of dictionaries with completion status for each local model test
+        list[dict]: List of dictionaries, one per model, containing:
+            - model_name: Name of the model
+            - test_type: "local_full_test"
+            - status: "not_started", "started_no_results", "in_progress", "completed", or "error"
+            - complete_num: Number of completed combinations
+            - expected_num: Expected number of combinations (all combinations)
+            - incomplete_num: Number of remaining combinations
+            - percentage: Completion percentage (0.0-100.0)
+            - latest_timestamp: Name of latest timestamp directory or "N/A"
+            - dir_exists: Whether the full_test directory exists
 
     """
     results = []
 
+    # Check if the base testing directory exists
     if not base_prediction_performance.exists():
         print(f"Output directory does not exist: {base_prediction_performance}")
         return results
 
-    # Scan for all model full_test directories
+    # Iterate through all configured models to check their full_test status
     for model_name in LIST_MODELS:
         full_test_dir = base_prediction_performance / model_name / "full_test"
 
-        # Initialize result entry
+        # Initialize result entry with default values
         result_entry = {
             "model_name": model_name,
-            "test_type": "local_full_test",
+            "test_type": "local_full_test",  # Distinguish from cluster slice testing
             "status": "not_started",
             "complete_num": 0,
             "expected_num": 0,
