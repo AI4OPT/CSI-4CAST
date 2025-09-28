@@ -4,6 +4,9 @@ z_artifacts_cluster
 z_refer
 scripts/outs/*
 
+**/*.ckpt
+z_artifacts/data
+
 # Python
 *.pyc
 *.pyo

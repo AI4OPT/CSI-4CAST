@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=fdd_rnn
+#SBATCH --job-name=tdd_rnn
 #SBATCH --account=gts-phentenryck3-coda20
 #SBATCH -N1 --gres=gpu:1
 #SBATCH --gres-flags=enforce-binding # Map CPUs to GPUs
@@ -16,6 +16,6 @@ cd /storage/home/hcoda1/1/scheng326/CSI-4CAST
 module load mamba/1.4.9
 mamba activate csi-4cast-env
 
-python3 -m src.cp.main -hcp z_artifacts/config/cp/rnn/fdd_rnn.yaml
+python3 -m src.cp.main -hcp z_artifacts/config/cp/rnn/tdd_rnn.yaml
 
 mamba deactivate

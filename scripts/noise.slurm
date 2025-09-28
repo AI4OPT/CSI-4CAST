@@ -16,6 +16,6 @@ cd /storage/home/hcoda1/1/scheng326/CSI-4CAST
 module load mamba/1.4.9
 mamba activate csi-4cast-env
 
-python3 -m src.testing.noise.noise_degree
+python3 -m src.noise.noise_degree
 
 mamba deactivate

@@ -1,4 +1,4 @@
-"""Noise Generation Module for CSI Data
+"""Noise Generation Module for CSI Data.
 
 This module provides various noise generation functions for Channel State Information (CSI) data.
 It supports different types of noise including vanilla Gaussian noise, phase noise,
@@ -10,7 +10,6 @@ Functions:
     gen_packagedrop_noise_nd: Generate package drop noise (simulates data loss)
     gen_burst_noise_nd: Generate burst noise with bell-shaped temporal pattern
 
-Author: CSI-4CAST Team
 """
 
 import math
@@ -263,9 +262,10 @@ def gen_burst_noise_nd(data: torch.Tensor, noise_degree: float = 0.01) -> torch.
 if __name__ == "__main__":
     """
     Demo script to test noise generation functions.
-    
+
     This section demonstrates the usage of all noise generation functions
     with sample CSI data tensors.
+    
     """
     # Create sample complex CSI data tensor
     # Shape: [batch_size=5, num_antennas=32, hist_len=16, num_subcarriers=300]

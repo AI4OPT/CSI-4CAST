@@ -1,4 +1,4 @@
-"""Noise Testing Interface for CSI Data
+"""Noise Testing Interface for CSI Data.
 
 This module provides a unified interface for applying various types of noise
 to Channel State Information (CSI) data during testing and evaluation.
@@ -8,7 +8,6 @@ and noise degrees for consistent testing across different scenarios.
 Classes:
     Noise: Main interface class providing convenient methods for noise generation
 
-Author: CSI-4CAST Team
 """
 
 import json
@@ -140,7 +139,7 @@ class Noise:
 if __name__ == "__main__":
     """
     Demo script to test the Noise interface class.
-    
+
     This section demonstrates how to use the Noise class to generate
     different types of noise with various SNR levels and noise degrees.
     """

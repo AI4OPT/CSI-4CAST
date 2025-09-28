@@ -1,4 +1,4 @@
-"""Noise Degree Analysis and SNR Calibration
+"""Noise Degree Analysis and SNR Calibration.
 
 This module performs comprehensive analysis of noise characteristics and calibrates
 noise degrees to achieve target SNR levels. It generates mappings between noise
@@ -15,7 +15,6 @@ Functions:
     compute_power: Calculate average power of complex-valued signals
     compute_snr: Convert power ratio to SNR in decibels
 
-Author: CSI-4CAST Team
 """
 
 import torch
@@ -77,17 +76,17 @@ def compute_snr(power_signal: torch.Tensor, power_noise: torch.Tensor) -> torch.
 if __name__ == "__main__":
     """
     Main analysis script for noise degree calibration.
-    
+
     This script performs comprehensive SNR analysis across different noise types
     and degrees, then generates optimal noise degree mappings for target SNR levels.
-    
+
     Process:
     1. Load and normalize test datasets from different channel conditions
     2. Compute signal power for each dataset
     3. Generate noise at various degrees and compute resulting SNR
     4. Perform reverse engineering to find optimal noise degrees for target SNRs
     5. Save results and mappings for use in testing
-    
+
     Outputs:
     - snr.csv: Detailed SNR analysis results
     - decide_nd.json: Optimal noise degree mappings for target SNRs

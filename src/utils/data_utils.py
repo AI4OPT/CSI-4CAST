@@ -12,6 +12,26 @@ Key Components:
 - Data loading functions: File I/O and preprocessing utilities
 - Collation functions: Batch processing for different antenna configurations
 
+Antenna Processing Strategies:
+    This module provides two distinct collation functions for different antenna processing approaches:
+
+    1. collect_fn_separate_antennas():
+       - Treats each antenna as an independent training sample
+       - Increases effective batch size by factor of num_antennas
+       - Converts complex CSI to real [real, imag] representation
+       - Memory efficient for models that don't exploit spatial correlation
+       - Output: [batch*antennas, time, freq*2] real-valued tensors
+
+    2. collect_fn_gather_antennas():
+       - Preserves spatial structure of antenna arrays
+       - Maintains complex-valued CSI representation
+       - Enables models to exploit spatial diversity and correlation
+       - Required for beamforming and advanced MIMO algorithms
+       - Output: [batch, antennas, time, freq] complex-valued tensors
+
+    The choice between these functions is controlled by the is_separate_antennas
+    configuration parameter and must be consistent across data and model configurations.
+
 The constants are organized by category:
 - Physical Layer: OFDM symbols, subcarrier spacing, carrier frequency
 - Data Generation: Batch sizes and repetition counts for different modes
@@ -32,6 +52,7 @@ Usage:
 """
 
 import logging
+from itertools import product
 from pathlib import Path
 
 import torch
@@ -224,22 +245,20 @@ def load_data(
     assert not (is_train and is_gen), "generalization is only for test mode"
 
     data = []
-    for cm in list_cm:
-        for ds in list_ds:
-            for ms in list_ms:
-                data.append(
-                    _load_data(
-                        dir_data=dir_data,
-                        cm=cm,
-                        ds=ds,
-                        ms=ms,
-                        is_train=is_train,
-                        is_gen=is_gen,
-                        is_hist=is_hist,
-                        is_U2D=is_U2D,
-                        num_load=num_load,
-                    )
-                )
+    for cm, ds, ms in product(list_cm, list_ds, list_ms):
+        data.append(
+            _load_data(
+                dir_data=dir_data,
+                cm=cm,
+                ds=ds,
+                ms=ms,
+                is_train=is_train,
+                is_gen=is_gen,
+                is_hist=is_hist,
+                is_U2D=is_U2D,
+                num_load=num_load,
+            )
+        )
 
     # concatenate the data
     data = torch.cat(data, dim=0)
@@ -320,6 +339,16 @@ def collect_fn_separate_antennas(batch):
         2. Flatten antennas: [batch_size * num_antennas, time_len, num_subcarriers] complex
         3. Convert to real: [batch_size * num_antennas, time_len, num_subcarriers * 2] real
 
+    Use cases:
+        - Models that treat each antenna independently (e.g., RNN per antenna)
+        - When spatial correlation between antennas is not important
+        - Memory-efficient training with increased effective batch size
+        - Simple feedforward or recurrent architectures
+
+    Comparison with collect_fn_gather_antennas():
+        - This function: Flattens antennas, real values, higher effective batch size
+        - Gather function: Preserves spatial structure, complex values, lower effective batch size
+
     """
     list_hist, list_pred = zip(*batch, strict=False)
     hist = torch.stack(list_hist, dim=0)  # [batch_size, num_antennas, hist_len, num_subcarriers]
@@ -339,9 +368,46 @@ def collect_fn_separate_antennas(batch):
 
 
 def collect_fn_gather_antennas(batch):
-    # from [batch_size, num_antennas, hist_len, num_subcarriers] complex
+    """Collate function for DataLoader that processes CSI data for gather antenna training.
+
+    This function transforms batched CSI data while preserving the antenna dimension
+    and complex-valued representation. It's designed for models that process all
+    antennas together, maintaining spatial correlation information.
+
+    Args:
+        batch (list): List of (hist, pred) tuples from CSIDataset
+            Original shape is [batch_size, num_antennas, hist_len, num_subcarriers] for hist
+            and [batch_size, num_antennas, pred_len, num_subcarriers] for pred
+
+    Returns:
+        tuple: (hist_complex, pred_complex) where:
+            - hist_complex: Historical CSI data with shape
+                          [batch_size, num_antennas, hist_len, num_subcarriers] (complex)
+            - pred_complex: Prediction CSI data with shape
+                          [batch_size, num_antennas, pred_len, num_subcarriers] (complex)
+
+    Transformation process:
+        1. Stack batch samples: [batch_size, num_antennas, time_len, num_subcarriers] complex
+        2. Preserve all dimensions and complex representation
+        3. Suitable for models that exploit spatial diversity across antennas
+
+    Use cases:
+        - Models that process antenna arrays as unified spatial structures
+        - Algorithms that leverage spatial correlation between antennas
+        - Beamforming and MIMO processing applications
+        - When antenna geometry and spacing are important
+
+    Comparison with collect_fn_separate_antennas():
+        - This function: Preserves spatial structure, complex values, lower effective batch size
+        - Separate function: Flattens antennas, real values, higher effective batch size
+
+    """
+    # Extract historical and prediction data from batch
     list_hist, list_pred = zip(*batch, strict=False)
+
+    # Stack samples to create batch dimension while preserving antenna structure
     hist = torch.stack(list_hist, dim=0)  # [batch_size, num_antennas, hist_len, num_subcarriers]
     pred = torch.stack(list_pred, dim=0)  # [batch_size, num_antennas, pred_len, num_subcarriers]
 
-    return hist, pred  # return [batch_size, num_antennas, hist_len/pred_len, num_subcarriers] complex
+    # Return complex-valued tensors with preserved antenna dimensions
+    return hist, pred  # [batch_size, num_antennas, hist_len/pred_len, num_subcarriers] complex
