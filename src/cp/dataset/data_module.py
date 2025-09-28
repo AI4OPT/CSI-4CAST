@@ -15,8 +15,8 @@ Key Features:
 The data module loads CSI data from multiple scenarios defined by:
 - Channel models: A, C, D (3 models)
 - Delay spreads: 30ns, 100ns, 300ns (3 values)
-- Mobility speeds: 1, 5, 15 m/s (3 values)
-Total: 3 × 3 × 3 = 27 parameter combinations
+- Mobility speeds: 1, 10, 30 m/s (3 values)
+Total: 3 * 3 * 3 = 27 parameter combinations
 
 Usage:
     from src.cp.dataset.data_module import TrainValDataModule
@@ -58,7 +58,7 @@ class TrainValDataModule(pl.LightningDataModule):
     """PyTorch Lightning Data Module for CSI Training and Validation.
 
     This data module implements subset-stratified data splitting to ensure that all 27
-    parameter combinations (channel model × delay spread × mobility speed) are represented
+    parameter combinations (channel model * delay spread * mobility speed) are represented
     proportionally in both training and validation sets. This approach prevents data leakage
     while ensuring representative validation performance.
 
@@ -91,17 +91,7 @@ class TrainValDataModule(pl.LightningDataModule):
         self.data_cfg = data_config
 
     def setup(self, stage=None):
-        """Setup datasets for training and validation with subset-stratified splitting.
-
-        This method is called by PyTorch Lightning before training begins. It loads
-        all CSI data, performs subset-stratified splitting, applies normalization,
-        adds noise, and creates the final datasets.
-
-        Args:
-            stage (str, optional): Training stage ('fit', 'validate', 'test', 'predict')
-
-        """
-        # Use subset-stratified splitting to ensure all 27 subsets are represented in both train and val
+        """Set up datasets for training and validation with subset-stratified splitting."""
         self._setup_subset_stratified_split()
 
     def _setup_subset_stratified_split(self):
@@ -237,17 +227,14 @@ class TrainValDataModule(pl.LightningDataModule):
 
         """
         # Select collation function based on antenna processing mode
-        if self.data_cfg.is_separate_antennas:
-            collate_fn = collect_fn_separate_antennas  # Process each antenna separately
-        else:
-            collate_fn = collect_fn_gather_antennas  # Process all antennas together
+        collect_fn = collect_fn_separate_antennas if self.data_cfg.is_separate_antennas else collect_fn_gather_antennas
 
         return DataLoader(
             self.train_dataset,
             batch_size=self.data_cfg.batch_size,
             shuffle=self.data_cfg.shuffle,
             num_workers=0,  # Set to 0 to avoid multiprocessing issues on some systems
-            collate_fn=collate_fn,
+            collate_fn=collect_fn,
         )
 
     def val_dataloader(self):
@@ -259,17 +246,14 @@ class TrainValDataModule(pl.LightningDataModule):
 
         """
         # Select collation function based on antenna processing mode
-        if self.data_cfg.is_separate_antennas:
-            collate_fn = collect_fn_separate_antennas  # Process each antenna separately
-        else:
-            collate_fn = collect_fn_gather_antennas  # Process all antennas together
+        collect_fn = collect_fn_separate_antennas if self.data_cfg.is_separate_antennas else collect_fn_gather_antennas
 
         return DataLoader(
             self.val_dataset,
             batch_size=self.data_cfg.batch_size,
             shuffle=False,  # No shuffling for validation
             num_workers=0,  # Set to 0 to avoid multiprocessing issues on some systems
-            collate_fn=collate_fn,
+            collate_fn=collect_fn,
         )
 
     def get_data_shapes(self):
@@ -293,15 +277,3 @@ class TrainValDataModule(pl.LightningDataModule):
         hist_batch, pred_batch = next(iter(loader))
 
         return hist_batch.shape, pred_batch.shape
-
-
-if __name__ == "__main__":
-    # Example usage
-    data_config = DataConfig()
-    data_module = TrainValDataModule(data_config)
-    data_module.setup()
-
-    print("✅ Subset-stratified data module created successfully!")
-    print(f"   🏋️ Training samples: {len(data_module.train_dataset)}")
-    print(f"   🔍 Validation samples: {len(data_module.val_dataset)}")
-    print("   📊 All 27 subsets represented in both train and validation")

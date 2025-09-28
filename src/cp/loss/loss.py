@@ -235,9 +235,9 @@ class LOSS:
     """Registry class for all available loss functions.
 
     Usage:
-        criterion = LOSS.NMSE()
-        criterion = LOSS.MSE()
-        criterion = LOSS.Huber(beta=0.5)
+        criterion = getattr(LOSS, "NMSE")()
+        criterion = getattr(LOSS, "MSE")()
+        criterion = getattr(LOSS, "Huber")(beta=0.5)
     """
 
     NMSE = NMSELoss
@@ -269,6 +269,7 @@ class SELoss(nn.Module):
 
         Args:
             SNR (int): Signal-to-noise ratio in dB for noise variance calculation
+            **kwargs: Additional arguments (unused)
 
         """
         super().__init__()
@@ -306,8 +307,8 @@ class SELoss(nn.Module):
 
         Handles different input formats and converts to complex tensors for SE computation.
         Supported formats:
-        - [batch_size, num_antennas, pred_len, num_subcarriers] complex (new format)
-        - [batch_size * num_antennas, pred_len, num_subcarriers*2] real (old format)
+        - [batch_size, num_antennas, pred_len, num_subcarriers] complex (complex-valued format)
+        - [batch_size * num_antennas, pred_len, num_subcarriers*2] real (real-valued format)
 
         Args:
             x_hat (torch.Tensor): Channel estimates (predicted or true)
@@ -318,7 +319,7 @@ class SELoss(nn.Module):
 
         """
         if torch.is_complex(x_hat):
-            # New complex tensor format: [batch_size, num_antennas, pred_len, num_subcarriers]
+            # Complex-valued tensor format: [batch_size, num_antennas, pred_len, num_subcarriers]
             if x_hat.dim() == 4:  # [batch_size, num_antennas, pred_len, num_subcarriers] complex
                 # Rearrange to [batch_size, pred_len, num_antennas, num_subcarriers] for SE computation
                 x_hat = x_hat.permute(0, 2, 1, 3)
@@ -331,7 +332,7 @@ class SELoss(nn.Module):
             x_hat = rearrange(x_hat, "(b nt) l k -> b l nt k", nt=TOT_ANTENNAS)
             x = rearrange(x, "(b nt) l k -> b l nt k", nt=TOT_ANTENNAS)
 
-            # Convert real-valued representation to complex tensor
+            # Convert real-valued representation to complex-valued tensor
             # [batch_size, pred_len, num_antennas, num_subcarriers] complex tensor
             x_hat_pair = rearrange(x_hat, "b l nt (k o) -> b l nt k o", o=2)
             x_hat = torch.complex(x_hat_pair[..., 0], x_hat_pair[..., 1])

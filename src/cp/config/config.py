@@ -60,7 +60,30 @@ class DataConfig:
         is_U2D (bool): Whether to use U2D (FDD) scenario (True) or TDD scenario (False)
         shuffle (bool): Whether to shuffle training data
         train_ratio (float): Ratio of data to use for training (0.0-1.0)
-        is_separate_antennas (bool): Whether to process antennas separately or together
+        is_separate_antennas (bool): Critical parameter controlling antenna processing strategy
+
+    Antenna Processing Strategy (is_separate_antennas):
+        This parameter determines how multi-antenna CSI data is processed during training:
+
+        When True (Separate Antennas):
+            - Each antenna's CSI is treated as an independent sample
+            - Data shape transformation: [batch, antennas, time, freq] → [batch*antennas, time, freq*2]
+            - Complex values converted to real [real, imag] representation
+            - Effective batch size increases by factor of num_antennas
+            - Use case: When antennas have independent channel characteristics
+            - Data preprocessing: collect_fn_separate_antennas() in src.utils.data_utils
+            - Memory efficient for models that don't need spatial correlation
+
+        When False (Gather Antennas):
+            - All antennas processed together maintaining spatial structure
+            - Data shape preserved: [batch, antennas, time, freq] (complex-valued)
+            - Preserves spatial correlation between antennas
+            - Use case: When leveraging antenna array spatial properties
+            - Data preprocessing: collect_fn_gather_antennas() in src.utils.data_utils
+            - Required for models that exploit spatial diversity
+
+        Note: This parameter must be consistent between DataConfig and ModelConfig
+              to ensure proper data flow through the training pipeline.
 
     """
 
@@ -82,9 +105,18 @@ class ModelConfig:
 
     Attributes:
         name (str): Model name (e.g., "RNN_TDD", "CNN_FDD")
-        is_separate_antennas (bool): Whether model processes antennas separately
+        is_separate_antennas (bool): Must match DataConfig.is_separate_antennas for consistency
         params (dict): Model-specific parameters (hidden dims, layers, etc.)
         checkpoint_path (str, optional): Path to checkpoint file for resuming training
+
+    Model-Data Consistency:
+        The is_separate_antennas parameter must match the corresponding parameter in DataConfig.
+        This ensures that the data preprocessing strategy aligns with the model's expected input format:
+
+        - If True: Model expects input shape [batch*antennas, time, features*2] (real-valued)
+        - If False: Model expects input shape [batch, antennas, time, features] (complex-valued)
+
+        Mismatch between DataConfig and ModelConfig will result in shape incompatibility errors.
 
     """
 

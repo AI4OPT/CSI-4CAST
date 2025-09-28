@@ -1,27 +1,35 @@
-from src.cp.models.baseline_models.cnn import CNN_pl
-from src.cp.models.baseline_models.llm4cp import LLM4CP_pl
+"""CSI Prediction Models Package.
+
+Unified interface for CSI prediction models supporting FDD/TDD scenarios.
+Registry pattern for easy model selection and switching.
+
+Available Models:
+- No-Prediction (NP): Baseline that repeats last observation
+- RNN: Recurrent Neural Network for sequence prediction
+
+Usage:
+    from src.cp.models import PREDICTORS
+    model = getattr(PREDICTORS, "RNN_TDD")(config)
+    baseline = getattr(PREDICTORS, "NP_FDD")()
+"""
+
 from src.cp.models.baseline_models.np import NOPREDICTMODEL
 from src.cp.models.baseline_models.rnn import RNN_pl
-from src.cp.models.baseline_models.stemgnn import STEMGNN_pl
-from src.cp.models.model_fdd import MODEL_fdd_pl
-from src.cp.models.model_tdd import MODEL_tdd_pl
 
 
 class PREDICTORS:
-    CNN_FDD = CNN_pl
-    CNN_TDD = CNN_pl
+    """Registry for CSI prediction models with FDD/TDD variants.
 
-    LLM4CP_FDD = LLM4CP_pl
-    LLM4CP_TDD = LLM4CP_pl
+    Example:
+        >>> model = getattr(PREDICTORS, "RNN_TDD")(config)
+        >>> baseline = getattr(PREDICTORS, "NP_FDD")(pred_len=4)
 
+    """
+
+    # Baseline models
     NP_FDD = NOPREDICTMODEL
     NP_TDD = NOPREDICTMODEL
 
+    # Neural network models
     RNN_FDD = RNN_pl
     RNN_TDD = RNN_pl
-
-    STEMGNN_FDD = STEMGNN_pl
-    STEMGNN_TDD = STEMGNN_pl
-
-    MODEL_FDD = MODEL_fdd_pl
-    MODEL_TDD = MODEL_tdd_pl
