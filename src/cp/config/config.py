@@ -1,3 +1,41 @@
+"""Configuration Management for CSI Prediction Experiments.
+
+This module provides a comprehensive configuration system for CSI prediction experiments
+using dataclasses. It supports hierarchical configuration with separate classes for
+different aspects of the experiment (data, model, training, optimization, etc.).
+
+The configuration system supports:
+- JSON and YAML serialization/deserialization
+- Type hints and validation
+- Default values for all parameters
+- Automatic experiment naming and output directory creation
+- Model-specific parameter configuration
+
+Key Configuration Classes:
+- DataConfig: Data loading and preprocessing settings
+- ModelConfig: Model architecture and parameters
+- TrainingConfig: Training procedure settings (epochs, callbacks, etc.)
+- OptimizerConfig: Optimizer settings (Adam, SGD, etc.)
+- SchedulerConfig: Learning rate scheduler settings
+- LossConfig: Loss function configuration
+- ExperimentConfig: Top-level configuration combining all components
+
+Usage:
+    # Create default configuration
+    config = ExperimentConfig()
+
+    # Load from file
+    config = ExperimentConfig.fromYaml('config.yaml')
+    config = ExperimentConfig.fromJson('config.json')
+
+    # Save configuration
+    config.saveYaml('output_config.yaml')
+    config.saveJson('output_config.json')
+
+    # Command line usage
+    python3 -m src.cp.config.config --model RNN --is_U2D
+"""
+
 import json
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -10,7 +48,21 @@ from src.utils.dirs import DIR_DATA, DIR_OUTPUTS
 
 @dataclass
 class DataConfig:
-    """Data-related configuration."""
+    """Data-related configuration for CSI prediction experiments.
+
+    This class contains all parameters related to data loading, preprocessing,
+    and data loader configuration.
+
+    Attributes:
+        dir_dataset (str): Path to the dataset directory containing CSI data files
+        batch_size (int): Batch size for training and validation data loaders
+        num_workers (int): Number of worker processes for data loading
+        is_U2D (bool): Whether to use U2D (FDD) scenario (True) or TDD scenario (False)
+        shuffle (bool): Whether to shuffle training data
+        train_ratio (float): Ratio of data to use for training (0.0-1.0)
+        is_separate_antennas (bool): Whether to process antennas separately or together
+
+    """
 
     dir_dataset: str = DIR_DATA
     batch_size: int = 16
@@ -23,7 +75,18 @@ class DataConfig:
 
 @dataclass
 class ModelConfig:
-    """Model-related configuration."""
+    """Model-related configuration for CSI prediction experiments.
+
+    This class contains parameters for model architecture, initialization,
+    and checkpoint management.
+
+    Attributes:
+        name (str): Model name (e.g., "RNN_TDD", "CNN_FDD")
+        is_separate_antennas (bool): Whether model processes antennas separately
+        params (dict): Model-specific parameters (hidden dims, layers, etc.)
+        checkpoint_path (str, optional): Path to checkpoint file for resuming training
+
+    """
 
     name: str = "RNN_TDD"
     is_separate_antennas: bool = True
@@ -33,25 +96,52 @@ class ModelConfig:
 
 @dataclass
 class TrainingConfig:
-    """Training-related configuration."""
+    """Training-related configuration for CSI prediction experiments.
+
+    This class contains all parameters related to the training process including
+    epochs, callbacks, monitoring, and logging settings.
+
+    Attributes:
+        num_epochs (int): Maximum number of training epochs
+        gradient_clip_val (float, optional): Gradient clipping value for stability
+        accumulate_grad_batches (int): Number of batches for gradient accumulation
+        check_val_every_n_epoch (int): Frequency of validation checks
+
+        Early Stopping:
+            early_stopping (bool): Whether to enable early stopping
+            early_stopping_patience (int): Number of epochs to wait before stopping
+            early_stopping_min_delta (float): Minimum change to qualify as improvement
+            early_stopping_mode (str): "min" or "max" for monitoring metric
+
+        Model Checkpointing:
+            save_top_k (int): Number of best checkpoints to save
+            monitor_metric (str): Metric to monitor for checkpointing
+            monitor_mode (str): "min" or "max" for monitoring metric
+
+        Logging:
+            log_every_n_steps (int): Frequency of logging during training
+            enable_progress_bar (bool): Whether to show progress bars
+            enable_model_summary (bool): Whether to show model summary
+
+    """
 
     num_epochs: int = 500
     gradient_clip_val: float | None = None
     accumulate_grad_batches: int = 1
     check_val_every_n_epoch: int = 1
 
-    # Early stopping
+    # Early stopping parameters
     early_stopping: bool = True
     early_stopping_patience: int = 20
     early_stopping_min_delta: float = 0.0001
     early_stopping_mode: str = "min"
 
-    # Model checkpoint
+    # Model checkpoint parameters
     save_top_k: int = 1
     monitor_metric: str = "val_loss"
     monitor_mode: str = "min"
 
-    # Logging
+    # Logging parameters
     log_every_n_steps: int = 50
     enable_progress_bar: bool = True
     enable_model_summary: bool = True
@@ -59,7 +149,21 @@ class TrainingConfig:
 
 @dataclass
 class OptimizerConfig:
-    """Optimizer configuration."""
+    """Optimizer configuration for CSI prediction experiments.
+
+    This class contains parameters for the optimization algorithm used during training.
+    Supports various PyTorch optimizers (Adam, SGD, AdamW, etc.).
+
+    Attributes:
+        name (str): Name of the optimizer class from torch.optim
+        params (dict): Optimizer-specific parameters (learning rate, weight decay, etc.)
+            Default Adam parameters:
+                - lr: Learning rate (0.0005)
+                - weight_decay: L2 regularization coefficient (0.0001)
+                - eps: Term added to denominator for numerical stability (1e-08)
+                - betas: Coefficients for computing running averages ([0.9, 0.999])
+
+    """
 
     name: str = "Adam"
     params: dict[str, Any] = field(
@@ -74,7 +178,23 @@ class OptimizerConfig:
 
 @dataclass
 class SchedulerConfig:
-    """Learning rate scheduler configuration."""
+    """Learning rate scheduler configuration for CSI prediction experiments.
+
+    This class contains parameters for the learning rate scheduling strategy.
+    Supports various PyTorch schedulers (ReduceLROnPlateau, StepLR, CosineAnnealingLR, etc.).
+
+    Attributes:
+        name (str): Name of the scheduler class from torch.optim.lr_scheduler
+        params (dict): Scheduler-specific parameters
+            Default ReduceLROnPlateau parameters:
+                - mode: "min" for metrics where lower is better
+                - factor: Factor by which learning rate is reduced (0.1)
+                - patience: Number of epochs with no improvement before reducing (10)
+                - threshold: Threshold for measuring new optimum (0.0001)
+                - cooldown: Number of epochs to wait before resuming operation (5)
+                - min_lr: Minimum learning rate (1e-06)
+
+    """
 
     name: str = "ReduceLROnPlateau"
     params: dict[str, Any] = field(
@@ -91,7 +211,20 @@ class SchedulerConfig:
 
 @dataclass
 class LossConfig:
-    """Loss function configuration."""
+    """Loss function configuration for CSI prediction experiments.
+
+    This class specifies which loss function to use and its parameters.
+    Supports various loss functions defined in src.cp.loss.loss module.
+
+    Attributes:
+        name (str): Name of the loss function (NMSE, MSE, Huber, etc.)
+        params (dict): Loss-specific parameters (empty dict for most losses)
+
+    Examples:
+                - For Huber loss: {"beta": 1.0}
+                - For NMSE/MSE: {} (no parameters needed)
+
+    """
 
     name: str = "NMSE"
     params: dict[str, Any] = field(default_factory=dict)
@@ -119,7 +252,7 @@ class ExperimentConfig:
 
     # experiment metadata
     prefix: str = "TDD"
-    model_name: str = "CNN"
+    model_name: str = "RNN"
     experiment_name: str = field(default="")
     output_dir: str = field(default="")
 

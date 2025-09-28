@@ -1,6 +1,6 @@
 # VSCode
 .vscode/
-z_artifacts
+z_artifacts_cluster
 z_refer
 scripts/outs/*
 

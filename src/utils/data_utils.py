@@ -1,3 +1,36 @@
+"""Data Utilities and Constants for CSI Prediction Framework.
+
+This module contains all data-related constants, utility functions, and dataset classes
+for the CSI prediction framework. It defines the simulation parameters, data generation
+settings, and data loading utilities used throughout the project.
+
+Key Components:
+- Physical constants: CSI periodicity, OFDM parameters, frequency settings
+- Data generation parameters: Batch sizes, repetition counts, debug modes
+- Channel model configurations: Lists of channel models, delay spreads, mobility speeds
+- Dataset classes: CSIDataset for PyTorch data loading
+- Data loading functions: File I/O and preprocessing utilities
+- Collation functions: Batch processing for different antenna configurations
+
+The constants are organized by category:
+- Physical Layer: OFDM symbols, subcarrier spacing, carrier frequency
+- Data Generation: Batch sizes and repetition counts for different modes
+- Testing Scenarios: Channel models, delay spreads, mobility speeds
+- Data Dimensions: Antenna counts, time slots, subcarrier counts
+
+Usage:
+    from src.utils.data_utils import (
+        LIST_CHANNEL_MODEL, LIST_DELAY_SPREAD, LIST_MIN_SPEED_TRAIN,
+        CSIDataset, load_data
+    )
+
+    # Create dataset
+    dataset = CSIDataset(historical_data, prediction_targets)
+
+    # Load specific scenario data
+    data = load_data(data_dir, cm="A", ds=30e-9, ms=5, is_train=True)
+"""
+
 import logging
 from pathlib import Path
 

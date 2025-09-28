@@ -1,3 +1,33 @@
+"""Configuration for CSI Prediction Model Testing.
+
+This module contains configuration parameters and utility functions for comprehensive
+testing of CSI prediction models. It defines testing scenarios, model lists, noise
+configurations, and job allocation settings for distributed testing on HPC clusters.
+
+Key Components:
+- Model configurations: List of models to test (MODEL, LLM4CP, CNN, RNN, NP, STEMGNN)
+- Scenario configurations: TDD and FDD testing scenarios
+- Noise configurations: Various noise types (phase, burst, vanilla, packagedrop)
+- Job allocation: SLURM array job configuration for parallel testing
+- Combination generation: Creates all testing parameter combinations
+
+The module supports both regular testing (27 combinations per scenario) and
+generalization testing (510 combinations per scenario) across different:
+- Channel models: A, C, D (regular) / A, B, C, D, E (generalization)
+- Delay spreads: 30-400 nanoseconds
+- Mobility speeds: 1-45 m/s
+- Noise types: Realistic noise models calibrated to target SNRs
+
+Usage:
+    from src.testing.config import LIST_MODELS, create_all_combinations
+
+    # Get all testing combinations
+    all_combinations = create_all_combinations()
+
+    # Slice for array job
+    job_combinations = slice_combinations(all_combinations, (job_id, total_jobs))
+"""
+
 from itertools import product
 
 import torch
@@ -28,11 +58,27 @@ JOBS_PER_MODEL = 20
 
 
 def create_all_combinations():
-    """Create all combinations for both regular and generation testing.
-    This is the same for all models.
+    """Create all testing combinations for both regular and generalization testing.
+
+    This function generates the complete set of testing parameter combinations used
+    across all models. It creates combinations for both regular testing (27 combinations
+    per scenario) and generalization testing (510 combinations per scenario).
+
+    The combinations include:
+    - Regular testing: All noise types (phase, burst, vanilla, packagedrop)
+    - Generalization testing: Only vanilla noise for robustness evaluation
+    - Both TDD and FDD scenarios
+    - All channel models, delay spreads, and mobility speeds
 
     Returns:
-        list: All combinations as tuples of (is_gen, scenario, noise_type, noise_degree, cm, ds, ms)
+        list: All combinations as tuples of (scenario, is_gen, noise_type, noise_degree, cm, ds, ms)
+            - scenario: "TDD" or "FDD"
+            - is_gen: Boolean indicating generalization testing
+            - noise_type: Type of noise ("phase", "burst", "vanilla", "packagedrop")
+            - noise_degree: Noise parameter (SNR or noise degree)
+            - cm: Channel model ("A", "B", "C", "D", "E")
+            - ds: Delay spread in seconds (30e-9 to 400e-9)
+            - ms: Mobility speed in m/s (1 to 45)
 
     """
     noise = Noise()
@@ -72,14 +118,24 @@ def create_all_combinations():
 
 
 def slice_combinations(list_all_combs, slice_info):
-    """Slice the combinations list based on array job allocation.
+    """Slice the combinations list based on SLURM array job allocation.
+
+    This function divides the complete list of testing combinations into smaller
+    chunks for parallel processing on HPC clusters. It ensures balanced distribution
+    of work across array jobs while handling remainder combinations properly.
 
     Args:
-        list_all_combs: List of all combinations
-        slice_info: Tuple of (slice_idx, total_jobs)
+        list_all_combs (list): Complete list of testing combinations
+        slice_info (tuple): Tuple of (slice_idx, total_jobs)
+            - slice_idx: Current array job index (0-based)
+            - total_jobs: Total number of array jobs
 
     Returns:
-        Sliced list of combinations for this specific array job
+        list: Subset of combinations assigned to this specific array job
+
+    Note:
+        The function distributes remainder combinations among the first jobs
+        to ensure all combinations are processed exactly once.
 
     """
     slice_idx, total_jobs = slice_info
@@ -101,10 +157,20 @@ def slice_combinations(list_all_combs, slice_info):
 
 
 def log_gpu_memory_usage(logger=None):
-    """Log current GPU memory usage if available.
+    """Log current GPU memory usage for monitoring and debugging.
+
+    This utility function logs GPU memory statistics including allocated memory,
+    reserved memory, and peak memory usage. Useful for monitoring memory usage
+    during testing and identifying potential memory leaks.
 
     Args:
-        logger: Logger instance to use (optional)
+        logger (logging.Logger, optional): Logger instance to use for output.
+            If None, prints to stdout.
+
+    Note:
+        - Requires CUDA to be available for GPU memory monitoring
+        - Falls back gracefully if PyTorch or CUDA is not available
+        - Memory values are reported in GB for readability
 
     """
     try:

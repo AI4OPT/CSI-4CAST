@@ -1,3 +1,33 @@
+"""PyTorch Lightning Data Module for CSI Prediction.
+
+This module implements a comprehensive data loading and preprocessing pipeline for CSI prediction
+models using PyTorch Lightning. It handles subset-stratified data splitting, normalization,
+noise addition, and efficient data loading for training and validation.
+
+Key Features:
+- Subset-stratified splitting: Ensures all 27 parameter combinations are represented in both
+  training and validation sets while preventing data leakage
+- Automatic data normalization using pre-computed statistics
+- Realistic noise addition during training and validation
+- Flexible antenna handling (separate vs. gathered antennas)
+- Memory-efficient data loading with proper collation functions
+
+The data module loads CSI data from multiple scenarios defined by:
+- Channel models: A, C, D (3 models)
+- Delay spreads: 30ns, 100ns, 300ns (3 values)
+- Mobility speeds: 1, 5, 15 m/s (3 values)
+Total: 3 × 3 × 3 = 27 parameter combinations
+
+Usage:
+    from src.cp.dataset.data_module import TrainValDataModule
+
+    data_module = TrainValDataModule(data_config)
+    data_module.setup()
+
+    train_loader = data_module.train_dataloader()
+    val_loader = data_module.val_dataloader()
+"""
+
 import logging
 import random
 from pathlib import Path
@@ -25,19 +55,71 @@ logger = logging.getLogger(__name__)
 
 
 class TrainValDataModule(pl.LightningDataModule):
+    """PyTorch Lightning Data Module for CSI Training and Validation.
+
+    This data module implements subset-stratified data splitting to ensure that all 27
+    parameter combinations (channel model × delay spread × mobility speed) are represented
+    proportionally in both training and validation sets. This approach prevents data leakage
+    while ensuring representative validation performance.
+
+    The module handles:
+    - Data loading from multiple CSI scenarios
+    - Subset-stratified train/validation splitting
+    - Data normalization using pre-computed statistics
+    - Noise addition for realistic training conditions
+    - Flexible data loading with configurable batch sizes and collation functions
+
+    Args:
+        data_config (DataConfig): Configuration object containing data loading parameters
+
+    """
+
     def __init__(self, data_config: DataConfig):
+        """Initialize the data module with configuration.
+
+        Args:
+            data_config (DataConfig): Data configuration containing:
+                - dir_dataset: Path to dataset directory
+                - batch_size: Batch size for data loaders
+                - train_ratio: Ratio of data to use for training (0.0-1.0)
+                - is_U2D: Whether to use U2D (FDD) or TDD scenario
+                - is_separate_antennas: Whether to process antennas separately
+                - shuffle: Whether to shuffle training data
+
+        """
         super().__init__()
         self.data_cfg = data_config
 
     def setup(self, stage=None):
-        """Setup datasets for training and validation with subset-aware splitting."""
+        """Setup datasets for training and validation with subset-stratified splitting.
+
+        This method is called by PyTorch Lightning before training begins. It loads
+        all CSI data, performs subset-stratified splitting, applies normalization,
+        adds noise, and creates the final datasets.
+
+        Args:
+            stage (str, optional): Training stage ('fit', 'validate', 'test', 'predict')
+
+        """
         # Use subset-stratified splitting to ensure all 27 subsets are represented in both train and val
         self._setup_subset_stratified_split()
 
     def _setup_subset_stratified_split(self):
         """Load data with subset-stratified splitting.
-        Each of the 27 subsets contributes proportionally to both train and validation sets.
-        This ensures representative validation without data leakage.
+
+        This method implements a sophisticated data splitting strategy where each of the 27
+        parameter combinations (subsets) contributes proportionally to both training and
+        validation sets. This ensures:
+
+        1. Representative validation: All scenarios are represented in validation
+        2. No data leakage: Training and validation come from the same distributions
+        3. Balanced evaluation: Each scenario contributes equally to validation metrics
+
+        The splitting process:
+        1. Load each of the 27 subsets individually
+        2. Split each subset according to train_ratio using consistent random seeding
+        3. Aggregate all training splits and all validation splits
+        4. Apply normalization and noise to the aggregated datasets
         """
         H_hist_train_list = []
         H_pred_train_list = []
@@ -147,44 +229,69 @@ class TrainValDataModule(pl.LightningDataModule):
         logger.info(f"🎯 Final datasets: Train={len(self.train_dataset)}, Val={len(self.val_dataset)}")
 
     def train_dataloader(self):
+        """Create training data loader.
+
+        Returns:
+            DataLoader: PyTorch DataLoader for training data with appropriate
+                       collation function based on antenna configuration
+
+        """
+        # Select collation function based on antenna processing mode
         if self.data_cfg.is_separate_antennas:
-            collate_fn = collect_fn_separate_antennas
+            collate_fn = collect_fn_separate_antennas  # Process each antenna separately
         else:
-            collate_fn = collect_fn_gather_antennas
+            collate_fn = collect_fn_gather_antennas  # Process all antennas together
 
         return DataLoader(
             self.train_dataset,
             batch_size=self.data_cfg.batch_size,
             shuffle=self.data_cfg.shuffle,
-            num_workers=0,  # fix num_workers to 0 to avoid BUS ERROR
+            num_workers=0,  # Set to 0 to avoid multiprocessing issues on some systems
             collate_fn=collate_fn,
         )
 
     def val_dataloader(self):
+        """Create validation data loader.
+
+        Returns:
+            DataLoader: PyTorch DataLoader for validation data with appropriate
+                       collation function based on antenna configuration
+
+        """
+        # Select collation function based on antenna processing mode
         if self.data_cfg.is_separate_antennas:
-            collate_fn = collect_fn_separate_antennas
+            collate_fn = collect_fn_separate_antennas  # Process each antenna separately
         else:
-            collate_fn = collect_fn_gather_antennas
+            collate_fn = collect_fn_gather_antennas  # Process all antennas together
 
         return DataLoader(
             self.val_dataset,
             batch_size=self.data_cfg.batch_size,
-            shuffle=False,
-            num_workers=0,  # fix num_workers to 0 to avoid BUS ERROR
+            shuffle=False,  # No shuffling for validation
+            num_workers=0,  # Set to 0 to avoid multiprocessing issues on some systems
             collate_fn=collate_fn,
         )
 
     def get_data_shapes(self):
-        """Return (history_shape, pred_shape) of a single sample from train_dataset.
-        If train_dataset is not yet set up or empty, returns (None, None).
+        """Get the shapes of data tensors from the training dataset.
+
+        This method is useful for model initialization and debugging to understand
+        the expected input and output tensor dimensions.
+
+        Returns:
+            tuple: (history_shape, prediction_shape) where:
+                - history_shape: Shape of historical CSI input tensors
+                - prediction_shape: Shape of prediction target tensors
+                - Returns (None, None) if dataset is not yet set up
+
         """
         if not hasattr(self, "train_dataset") or self.train_dataset is None or len(self.train_dataset) == 0:
             return None, None
 
-        # Grab one sample (use __getitem__(0))
+        # Get a batch from the training loader to determine shapes
         loader = self.train_dataloader()
         hist_batch, pred_batch = next(iter(loader))
-        # Get shapes
+
         return hist_batch.shape, pred_batch.shape
 
 
