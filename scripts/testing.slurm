@@ -6,7 +6,7 @@
 #SBATCH --gres-flags=enforce-binding # Map CPUs to GPUs
 #SBATCH --mem=256G
 #SBATCH --time=2:00:00
-#SBATCH --array=81-100  # Array IDs: 1-20 MODEL, 21-40 LLM4CP, 41-60 CNN, 61-80 RNN, 81-100 NP, 101-120 STEMGNN
+#SBATCH --array=1  # Array IDs: 1-20 RNN, 21-40 NP
 #SBATCH -q embers
 #SBATCH --output=scripts/outs/testing/%x_%A_%a.out  # %A is job array ID, %a is task ID
 
@@ -18,7 +18,7 @@ mamba activate csi-4cast-env
 
 echo "Starting array job ${SLURM_ARRAY_TASK_ID} of ${SLURM_ARRAY_JOB_ID}"
 
-python3 -m src.testing.prediction_performance.main
+python3 -m src.testing.prediction_performance.main -m NP
 
 echo "Completed array job ${SLURM_ARRAY_TASK_ID}"
 

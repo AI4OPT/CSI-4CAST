@@ -123,8 +123,8 @@ def gather_all_results(
                     if verbose:
                         print(f"  Error reading slice_{slice_number}: {e}")
 
-        elif use_source == "full_test":
-            # Gather full_test results for this model
+        elif use_source == "local":
+            # Gather full_test results for this model (handle "local" source types)
             full_test_dir = base_prediction_performance / model_name / "full_test"
             if not full_test_dir.exists():
                 continue

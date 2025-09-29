@@ -254,146 +254,89 @@ if __name__ == "__main__":
     dir_output = Path(DIR_DATA)
     dir_output.mkdir(parents=True, exist_ok=True)
 
-    # Generate regular dataset (training or testing)
-    # Regular datasets use a limited set of channel conditions for controlled evaluation
-    if not args.is_gen:
-        # Determine dataset parameters based on training/testing mode
-        if args.is_train:
-            mode = "train"
-            list_min_speed = LIST_MIN_SPEED_TRAIN  # Training mobility scenarios
-            num_repeat = num_repeat_train          # Number of training samples per scenario (debug-aware)
-        else:
-            mode = "test"
-            list_min_speed = LIST_MIN_SPEED_TEST    # Testing mobility scenarios
-            num_repeat = num_repeat_test            # Number of testing samples per scenario (debug-aware)
-
-        # Create directory structure: data/{train|test}/regular/
-        dir_mode = dir_output / mode / "regular"
-        dir_mode.mkdir(parents=True, exist_ok=True)
-
-        # Generate all combinations of channel parameters for regular dataset
-        # Cartesian product of: channel_models × delay_spreads × min_speeds
-        list_all_comb = list(
-            product(
-                LIST_CHANNEL_MODEL,    # ['A', 'C', 'D'] - 3 channel models
-                LIST_DELAY_SPREAD,     # [30e-9, 100e-9, 300e-9] - 3 delay spreads
-                list_min_speed,        # [1, 10, 30] - 3 mobility scenarios
-            )
-        )
-        num_total_comb = len(LIST_CHANNEL_MODEL) * len(LIST_DELAY_SPREAD) * len(list_min_speed)
-
-        # Distribute combinations across SLURM array tasks for parallel processing
-        # Each task processes a subset of all parameter combinations
-        slice_comb = get_slice(
-            list_all_combs=list_all_comb,
-            num_total_comb=num_total_comb,
-            array_id=ARRAY_ID,
-            num_chunks=NUM_CHUNKS,
-        )
-
-        # Process each parameter combination assigned to this array task
-        for cm, ds, ms in tqdm(
-            slice_comb,
-            total=len(slice_comb),
-            desc=f"{mode} | {ARRAY_ID}/{NUM_CHUNKS}",
-        ):
-            # Create standardized folder name for this parameter combination
-            folder_name = make_folder_name(cm, ds, ms)
-            dir_folder = dir_mode / folder_name
-            dir_folder.mkdir(parents=True, exist_ok=True)
-
-            print()
-            print("Generating CSI for {} | channel model {} | delay spread {} | min speed {}".format(mode, cm, ds, ms))
-            
-            # Skip generation if all required files already exist
-            if check_exist(dir_folder):
-                print("{} | {} already exists, skipping...".format(mode, dir_folder))
-                continue
-            print()
-
-            # Initialize CSI simulator with current parameter combination
-            csi_config = CSI_Config(batch_size=batch_size, cdl_model=cm, delay_spread=ds, min_speed=ms)
-            csi_config = csi_config.getConfig()
-
-            # Create simulator instance with the configuration
-            csi_simulator = CSI_Simulator(csi_config)
-
-            # Generate CSI dataset for this parameter combination
-            # This creates H_U_hist.pt, H_U_pred.pt, and H_D_pred.pt files
-            gen_csi(
-                csi_simulator=csi_simulator,
-                dir_folder=dir_folder,
-                batch_size=batch_size,
-                num_repeat=num_repeat,
-            )
-
-            # print(f"{mode} | {dir_folder}")
-
+    # Determine dataset configuration based on command line arguments
+    if args.is_gen:
+        # Generalization dataset configuration
+        mode = "generalization"
+        dataset_type = "test"
+        list_channel_models = LIST_CHANNEL_MODEL_GEN   # Extended: ['A', 'B', 'C', 'D', 'E']
+        list_delay_spreads = LIST_DELAY_SPREAD_GEN     # Extended: 6 delay spread values
+        list_min_speeds = LIST_MIN_SPEED_TEST_GEN      # Extended: 17 mobility scenarios
+        num_repeat = num_repeat_test                   # Use test sample count for consistency
+        dir_dataset = dir_output / dataset_type / mode
     else:
-        # Generate generalization dataset for testing model robustness
-        # Generalization dataset uses extended parameter ranges to evaluate
-        # model performance on unseen channel conditions
-        dir_gen = dir_output / "test" / "generalization"
-        dir_gen.mkdir(parents=True, exist_ok=True)
+        # Regular dataset configuration (training or testing)
+        if args.is_train:
+            mode = "regular"
+            dataset_type = "train"
+            list_min_speeds = LIST_MIN_SPEED_TRAIN     # Training mobility scenarios
+            num_repeat = num_repeat_train              # Training sample count (debug-aware)
+        else:
+            mode = "regular"
+            dataset_type = "test"
+            list_min_speeds = LIST_MIN_SPEED_TEST      # Testing mobility scenarios
+            num_repeat = num_repeat_test               # Testing sample count (debug-aware)
+        
+        # Regular datasets use limited parameter ranges for controlled evaluation
+        list_channel_models = LIST_CHANNEL_MODEL       # Standard: ['A', 'C', 'D']
+        list_delay_spreads = LIST_DELAY_SPREAD         # Standard: 3 delay spread values
+        dir_dataset = dir_output / dataset_type / mode
 
-        # Generate all combinations for generalization testing
-        # Extended parameter ranges compared to regular dataset:
-        # - More channel models: ['A', 'B', 'C', 'D', 'E'] (5 models)
-        # - More delay spreads: [30e-9, 50e-9, 100e-9, 200e-9, 300e-9, 400e-9] (6 values)
-        # - More mobility scenarios: [*range(3, 46, 3), 1, 10]] (17 values)
-        list_all_comb = list(
-            product(
-                LIST_CHANNEL_MODEL_GEN,   # Extended channel model list
-                LIST_DELAY_SPREAD_GEN,    # Extended delay spread range
-                LIST_MIN_SPEED_TEST_GEN,  # Extended mobility range
-            )
+    # Create output directory structure
+    dir_dataset.mkdir(parents=True, exist_ok=True)
+
+    # Generate all parameter combinations for the current dataset type
+    list_all_comb = list(
+        product(
+            list_channel_models,    # Channel models (3 for regular, 5 for generalization)
+            list_delay_spreads,     # Delay spreads (3 for regular, 6 for generalization)
+            list_min_speeds,        # Mobility scenarios (varies by dataset type)
         )
-        num_total_comb = len(LIST_CHANNEL_MODEL_GEN) * len(LIST_DELAY_SPREAD_GEN) * len(LIST_MIN_SPEED_TEST_GEN)
+    )
+    num_total_comb = len(list_channel_models) * len(list_delay_spreads) * len(list_min_speeds)
 
-        # Distribute generalization combinations across array tasks
-        slice_comb = get_slice(
-            list_all_combs=list_all_comb,
-            num_total_comb=num_total_comb,
-            array_id=ARRAY_ID,
-            num_chunks=NUM_CHUNKS,
+    # Distribute combinations across SLURM array tasks for parallel processing
+    slice_comb = get_slice(
+        list_all_combs=list_all_comb,
+        num_total_comb=num_total_comb,
+        array_id=ARRAY_ID,
+        num_chunks=NUM_CHUNKS,
+    )
+
+    # Process each parameter combination assigned to this array task
+    progress_desc = f"{dataset_type}_{mode}" if mode != "generalization" else "generalization"
+    for cm, ds, ms in tqdm(
+        slice_comb,
+        total=len(slice_comb),
+        desc=f"{progress_desc} | {ARRAY_ID}/{NUM_CHUNKS}",
+    ):
+        # Create standardized folder name for this parameter combination
+        folder_name = make_folder_name(cm, ds, ms)
+        dir_folder = dir_dataset / folder_name
+        dir_folder.mkdir(parents=True, exist_ok=True)
+
+        print()
+        print("Generating CSI for {} | channel model {} | delay spread {} | min speed {}".format(
+            progress_desc, cm, ds, ms))
+        
+        # Skip generation if all required files already exist
+        if check_exist(dir_folder):
+            print("{} | {} already exists, skipping...".format(progress_desc, dir_folder))
+            continue
+        print()
+
+        # Initialize CSI simulator with current parameter combination
+        csi_config = CSI_Config(batch_size=batch_size, cdl_model=cm, delay_spread=ds, min_speed=ms)
+        csi_config = csi_config.getConfig()
+
+        # Create simulator instance with the configuration
+        csi_simulator = CSI_Simulator(csi_config)
+
+        # Generate CSI dataset for this parameter combination
+        # This creates H_U_hist.pt, H_U_pred.pt, and H_D_pred.pt files
+        gen_csi(
+            csi_simulator=csi_simulator,
+            dir_folder=dir_folder,
+            batch_size=batch_size,
+            num_repeat=num_repeat,
         )
-
-        # Process each generalization parameter combination
-        for cm, ds, ms in tqdm(
-            slice_comb,
-            total=len(slice_comb),
-            desc=f"generalization | {ARRAY_ID}/{NUM_CHUNKS}",
-        ):
-            # Create folder for this generalization test scenario
-            folder_name = make_folder_name(cm, ds, ms)
-            dir_folder = dir_gen / folder_name
-            dir_folder.mkdir(parents=True, exist_ok=True)
-
-            print()
-            print(
-                "Generating CSI for {} | channel model {} | delay spread {} | min speed {}".format(
-                    "test gen", cm, ds, ms
-                )
-            )
-            
-            # Skip if generalization data already exists for this scenario
-            if check_exist(dir_folder):
-                print(f"generalization | {dir_folder} already exists, skipping...")
-                continue
-            print()
-
-            # Configure simulator for generalization test scenario
-            csi_config = CSI_Config(batch_size=batch_size, cdl_model=cm, delay_spread=ds, min_speed=ms)
-            csi_config = csi_config.getConfig()
-
-            # Create simulator for this generalization scenario
-            csi_simulator = CSI_Simulator(csi_config)
-
-            # Generate generalization test data
-            # Note: Uses test sample count (not training count) for consistent test set size
-            gen_csi(
-                csi_simulator=csi_simulator,
-                dir_folder=dir_folder,
-                batch_size=batch_size,
-                num_repeat=num_repeat_test,  # Same number of samples as regular test set (debug-aware)
-            )

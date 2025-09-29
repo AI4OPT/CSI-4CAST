@@ -3,6 +3,7 @@
 z_artifacts_cluster
 z_refer
 scripts/outs/*
+scripts/*.slurm
 
 **/*.ckpt
 z_artifacts/data

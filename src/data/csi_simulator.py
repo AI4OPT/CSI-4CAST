@@ -1,22 +1,58 @@
+"""CSI Simulator Module for 3GPP TR 38.901 Channel Models.
+
+This module provides a comprehensive CSI (Channel State Information) simulation
+framework based on 3GPP TR 38.901 clustered delay line (CDL) channel models.
+It generates realistic channel responses for uplink transmission scenarios
+between user terminals (UT) and base stations (BS).
+
+Key Features:
+    - 3GPP TR 38.901 compliant CDL channel models (A, B, C, D, E)
+    - Configurable antenna arrays (single/dual polarization)
+    - OFDM-based channel response generation
+    - Batch processing for efficient dataset generation
+    - Memory-optimized implementation with garbage collection
+
+Dependencies:
+    - Sionna: NVIDIA's open-source library for link-level simulations
+    - PyTorch: For tensor operations and data handling
+    
+References:
+    - 3GPP TR 38.901: "Study on channel model for frequencies from 0.5 to 100 GHz"
+    - Sionna Documentation: https://nvlabs.github.io/sionna/
+"""
+
 import gc
 
 import torch
-from sionna.phy.channel import cir_to_ofdm_channel, subcarrier_frequencies
-from sionna.phy.channel.tr38901 import CDL, PanelArray
-from sionna.phy.ofdm import ResourceGrid
 
+# === Sionna Channel Modeling Components ===
+# Sionna is NVIDIA's open-source library for link-level wireless communications simulation
+
+from sionna.phy.channel import cir_to_ofdm_channel, subcarrier_frequencies
+# - cir_to_ofdm_channel: Convert CIR to per-subcarrier frequency response
+# - subcarrier_frequencies: Generate OFDM subcarrier frequency grid
+
+from sionna.phy.channel.tr38901 import CDL, PanelArray
+# - CDL: 3GPP TR 38.901 CDL channel models (A–E) with delay, Doppler, and spatial effects
+# - PanelArray: Define BS/UT antenna array geometry and patterns for MIMO
+
+from sionna.phy.ofdm import ResourceGrid
+# - ResourceGrid: Specify OFDM lattice (symbols, subcarriers, CP) and pilot placement
+
+
+# Import simulation constants and parameters
 from src.utils.data_utils import (
-    HIST_LEN,
-    NUM_BS_ANT_COL,
-    NUM_BS_ANT_ROW,
-    NUM_GAP_SUBCARRIERS,
-    NUM_SUBCARRIERS,
-    NUM_UT_ANT,
-    PRED_LEN,
-    CSI_PERIODICITY,
-    CARRIER_FREQUENCY,
-    SUBCARRIER_SPACING,
-    NUM_OFDM_SYMBOLS,
+    HIST_LEN,              # Number of historical time slots for model input
+    NUM_BS_ANT_COL,        # Base station antenna array columns
+    NUM_BS_ANT_ROW,        # Base station antenna array rows  
+    NUM_GAP_SUBCARRIERS,   # Gap subcarriers between UL and DL bands
+    NUM_SUBCARRIERS,       # Number of subcarriers per direction (UL/DL)
+    NUM_UT_ANT,            # Number of user terminal antennas
+    PRED_LEN,              # Number of prediction time slots for model output
+    CSI_PERIODICITY,       # CSI reporting periodicity in OFDM symbols
+    CARRIER_FREQUENCY,     # Carrier frequency in Hz
+    SUBCARRIER_SPACING,    # Subcarrier spacing in Hz
+    NUM_OFDM_SYMBOLS,      # Number of OFDM symbols per slot
 )
 
 
@@ -120,6 +156,9 @@ class CSI_Simulator:
         bs_array (PanelArray): Base station antenna array
         frequencies (array): Subcarrier frequencies
         cdl (CDL): 3GPP CDL channel model instance
+        
+    References:
+        - https://nvlabs.github.io/sionna/phy/tutorials/OFDM_MIMO_Detection.html for the following configuration
     """
     
     def __init__(self, config):
@@ -146,45 +185,54 @@ class CSI_Simulator:
         self.num_ofdm_symbols = config["num_ofdm_symbols"]
         self.csi_periodicity = config["csi_periodicity"]
 
+        # Configure OFDM resource grid for channel estimation
+        # Uses standard 5G NR parameters with Kronecker pilot pattern
         self.rg = ResourceGrid(
-            num_ofdm_symbols=14,
-            fft_size=self.fft_size,
-            subcarrier_spacing=self.subcarrier_spacing,
-            num_tx=self.num_ut_ant,
-            num_streams_per_tx=1,
-            cyclic_prefix_length=6,
-            pilot_pattern="kronecker",
-            pilot_ofdm_symbol_indices=[2, 11],
+            num_ofdm_symbols=14,                    # Standard slot length (14 OFDM symbols)
+            fft_size=self.fft_size,                 # Total subcarriers (UL + gap + DL)
+            subcarrier_spacing=self.subcarrier_spacing,  # 15 kHz for sub-6 GHz
+            num_tx=self.num_ut_ant,                 # Number of transmitting antennas (UT)
+            num_streams_per_tx=1,                   # Single stream per antenna
+            cyclic_prefix_length=6,                 # Normal cyclic prefix length
+            pilot_pattern="kronecker",              # Kronecker pilot pattern for MIMO
+            pilot_ofdm_symbol_indices=[2, 11],      # Pilot symbol positions in slot
         )
 
+        # Configure user terminal (UT) antenna array
+        # Single polarization omni-directional antennas for mobile devices
         self.ut_array = PanelArray(
-            num_rows_per_panel=self.num_ut_ant,
+            num_rows_per_panel=self.num_ut_ant,     # Square antenna array
             num_cols_per_panel=self.num_ut_ant,
-            polarization="single",
-            polarization_type="V",
-            antenna_pattern="omni",
+            polarization="single",                  # Single polarization (vertical)
+            polarization_type="V",                  # Vertical polarization
+            antenna_pattern="omni",                 # Omni-directional pattern
             carrier_frequency=self.carrier_frequency,
         )
 
+        # Configure base station (BS) antenna array  
+        # Dual polarization with 3GPP 38.901 antenna pattern
         self.bs_array = PanelArray(
-            num_rows_per_panel=self.num_bs_ant_row,
+            num_rows_per_panel=self.num_bs_ant_row, # 4x4 antenna array (configurable)
             num_cols_per_panel=self.num_bs_ant_col,
-            polarization="dual",
-            polarization_type="cross",
-            antenna_pattern="38.901",
+            polarization="dual",                    # Dual polarization (+/-45°)
+            polarization_type="cross",              # Cross-polarized antennas
+            antenna_pattern="38.901",               # 3GPP standardized pattern
             carrier_frequency=self.carrier_frequency,
         )
 
+        # Generate subcarrier frequencies for OFDM channel conversion
         self.frequencies = subcarrier_frequencies(self.fft_size, self.subcarrier_spacing)
 
+        # Initialize 3GPP CDL channel model
+        # Supports models A-E with different delay spread and mobility characteristics
         self.cdl = CDL(
-            model=self.cdl_model,
-            delay_spread=self.delay_spread,
+            model=self.cdl_model,                   # CDL model type ('A', 'B', 'C', 'D', 'E')
+            delay_spread=self.delay_spread,         # RMS delay spread in seconds
             carrier_frequency=self.carrier_frequency,
-            ut_array=self.ut_array,
-            bs_array=self.bs_array,
-            direction="uplink",
-            min_speed=self.min_speed,
+            ut_array=self.ut_array,                 # UT antenna configuration
+            bs_array=self.bs_array,                 # BS antenna configuration
+            direction="uplink",                     # Uplink transmission (UT → BS)
+            min_speed=self.min_speed,               # Minimum speed for Doppler effects
         )
 
     def __call__(self) -> torch.Tensor:
@@ -208,24 +256,35 @@ class CSI_Simulator:
             prediction target (last PRED_LEN slots) time periods.
             Subcarriers are organized as [UL_subcarriers, gap, DL_subcarriers].
         """
-        # Generate channel impulse response using CDL model
+        # Step 1: Generate channel impulse response (CIR) using 3GPP CDL model
+        # The CDL model generates time-varying channel impulse responses based on
+        # the specified propagation environment and mobility conditions
         cir = self.cdl(
-            self.batch_size,
-            self.num_slots * self.num_ofdm_symbols,
-            1 / self.rg.ofdm_symbol_duration,
+            self.batch_size,                        # Number of independent channel realizations
+            self.num_slots * self.num_ofdm_symbols, # Total number of time samples
+            1 / self.rg.ofdm_symbol_duration,       # Sampling rate (samples per second)
         )
 
-        # Convert CIR to OFDM channel response
+        # Step 2: Convert CIR to OFDM channel frequency response
+        # Transform time-domain impulse response to frequency-domain coefficients
+        # for each subcarrier using FFT-based conversion with normalization
         h_long = cir_to_ofdm_channel(self.frequencies, *cir, normalize=True)
         
-        # Sample at CSI reporting intervals
+        # Step 3: Sample at CSI reporting intervals
+        # Extract channel samples at periodic intervals matching CSI reporting rate
+        # This simulates realistic CSI acquisition where full channel knowledge
+        # is only available at specific time instances
         sampling_interval = self.num_ofdm_symbols * self.csi_periodicity
         h = h_long[:, :, :, :, :, 0:-1:sampling_interval, :]
         
-        # Convert to PyTorch tensor and clean up memory
+        # Step 4: Convert to PyTorch tensor and optimize memory usage
+        # Convert from TensorFlow/NumPy format to PyTorch tensor
+        # Clean up intermediate variables to prevent memory leaks
         h = torch.from_numpy(h.numpy())
-        del h_long
-        gc.collect()
+        del h_long  # Free memory from large intermediate tensor
+        gc.collect()  # Force garbage collection
+        
+        # Remove singleton dimensions and return final CSI tensor
         return h.squeeze()
 
     def __str__(self):

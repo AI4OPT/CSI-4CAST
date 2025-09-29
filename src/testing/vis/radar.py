@@ -256,9 +256,9 @@ def create_combined_radar_plot(
 
 
 def _color_category_labels(ax, categories: list, value_keys: list) -> None:
-    """Color the category labels based on whether they represent rank or percentage metrics."""
-    # Define which metrics are rank-based vs percentage-based
-    rank_metrics = {
+    """Color the category labels based on whether they represent performance or computational metrics."""
+    # Define which metrics are performance-based vs computational-based
+    performance_metrics = {
         "SE_Generalization",
         "NMSE_Generalization",
         "SE_Regular",
@@ -268,18 +268,18 @@ def _color_category_labels(ax, categories: list, value_keys: list) -> None:
     }
 
     # Colors for different metric types
-    rank_color = "#1f77b4"  # Blue for rank-based metrics
-    percentage_color = "#ff7f0e"  # Orange for percentage-based metrics
+    performance_color = "#1f77b4"  # Blue for performance metrics (SE/NMSE)
+    computational_color = "#ff7f0e"  # Orange for computational metrics (FLOPs, inference time, params)
 
     # Get the x-axis labels (category labels)
     labels = ax.get_xticklabels()
 
     for label, value_key in zip(labels, value_keys, strict=False):
-        if value_key in rank_metrics:
-            label.set_color(rank_color)
+        if value_key in performance_metrics:
+            label.set_color(performance_color)
             label.set_fontweight("bold")
         else:
-            label.set_color(percentage_color)
+            label.set_color(computational_color)
             label.set_fontweight("bold")
 
 
@@ -363,6 +363,9 @@ def _create_combined_radar_plot(
     # Customize the plot
     ax.set_xticks(angles[:-1])
     ax.set_xticklabels(categories)  # Show axis labels
+
+    # Color the axis labels based on metric type
+    _color_category_labels(ax, categories, value_keys)
 
     # Move labels outside the plot area to prevent overlap
     ax.tick_params(axis="x", pad=25)

@@ -12,10 +12,10 @@ CSI-4CAST/
 ├── pyproject.toml              # Python project configuration and linting rules
 ├── scripts/                    # SLURM job scripts and templates
 │   ├── data_gen_template.sh    # Template for data generation jobs
-│   ├── cp.slurm               # Model training job script
+│   ├── cp_template.sh         # Template for model training jobs
+│   ├── testing_template.sh    # Template for testing jobs
 │   ├── testing.slurm          # Model testing job script
-│   ├── noise.slurm            # Noise degree testing script
-│   └── computational_overhead.slurm  # Computational overhead testing
+│   └── outs/                  # Job output logs
 ├── src/                        # Source code
 │   ├── data/                   # Data generation module
 │   │   ├── csi_simulator.py    # CSI simulation using Sionna
@@ -29,20 +29,10 @@ CSI-4CAST/
 │   │   ├── models/            # Model architectures
 │   │   │   ├── __init__.py    # Model registry (PREDICTORS class)
 │   │   │   ├── common/        # Shared model components
-│   │   │   │   ├── base.py    # BaseCSIModel class
-│   │   │   │   ├── activation.py # Custom activation functions
-│   │   │   │   ├── dataembedding.py # Data embedding layers
-│   │   │   │   ├── mlp.py     # Multi-layer perceptron components
-│   │   │   │   ├── normalizer.py # Normalization layers
-│   │   │   │   └── resblocks.py # Residual block components
-│   │   │   ├── baseline_models/ # Baseline model implementations
-│   │   │   │   ├── cnn.py     # CNN-based predictor
-│   │   │   │   ├── llm4cp.py  # LLM-based predictor
-│   │   │   │   ├── np.py      # No-prediction baseline
-│   │   │   │   ├── rnn.py     # RNN-based predictor
-│   │   │   │   └── stemgnn.py # STEM-GNN predictor
-│   │   │   ├── model_fdd.py   # FDD-specific model architecture
-│   │   │   └── model_tdd.py   # TDD-specific model architecture
+│   │   │   │   └── base.py    # BaseCSIModel class
+│   │   │   └── baseline_models/ # Baseline model implementations
+│   │   │       ├── np.py      # No-prediction baseline
+│   │   │       └── rnn.py     # RNN-based predictor
 │   │   └── loss/              # Loss functions
 │   │       └── loss.py        # Custom loss implementations
 │   ├── noise/                  # Noise modeling and testing module
@@ -83,9 +73,19 @@ CSI-4CAST/
 │       └── vis_utils.py       # Visualization utilities
 └── z_artifacts/               # Generated artifacts and outputs
     ├── config/                # Generated configuration files
-    ├── data/                  # Generated datasets
+    │   └── cp/                # Channel prediction configurations
+    ├── data/                  # Generated datasets (created during data generation)
     ├── outputs/               # Training and testing outputs
+    │   ├── [TDD/FDD]/         # Training outputs by scenario
+    │   ├── noise/             # Noise calibration results
+    │   └── testing/           # Testing results and analysis
+    │       ├── computational_overhead/ # Performance profiling results
+    │       ├── prediction_performance/ # Accuracy testing results
+    │       ├── results/       # Processed analysis results
+    │       └── vis/           # Generated visualizations
     └── weights/               # Trained model checkpoints
+        ├── fdd/               # FDD scenario model weights
+        └── tdd/               # TDD scenario model weights
 ```
 
 ## Core Modules
@@ -130,9 +130,9 @@ The channel prediction module provides a comprehensive framework for training CS
 - **[`config/config.py`](src/cp/config/config.py)**: Configuration management system for training parameters, model settings, and hyperparameters
 - **[`dataset/data_module.py`](src/cp/dataset/data_module.py)**: PyTorch Lightning data modules for efficient data loading and preprocessing
 - **[`models/`](src/cp/models/)**: Model architectures including:
+  - **[`__init__.py`](src/cp/models/__init__.py)**: PREDICTORS registry for model selection
   - **[`common/base.py`](src/cp/models/common/base.py)**: BaseCSIModel class that all models inherit from
-  - **[`baseline_models/`](src/cp/models/baseline_models/)**: Implementation of various baseline models (CNN, RNN, LLM4CP, STEM-GNN)
-  - **[`model_fdd.py`](src/cp/models/model_fdd.py)** and **[`model_tdd.py`](src/cp/models/model_tdd.py)**: Specialized architectures for FDD and TDD scenarios
+  - **[`baseline_models/`](src/cp/models/baseline_models/)**: Implementation of baseline models (NP, RNN)
 - **[`loss/loss.py`](src/cp/loss/loss.py)**: Custom loss functions optimized for CSI prediction tasks
 
 ### 3. Noise Module (`src/noise`)
@@ -205,7 +205,7 @@ After data generation, compute normalization statistics using [`src/utils/norm_u
 python3 -m src.utils.norm_utils
 ```
 
-The normalization stats will be saved in `z_refer/data/stats/[fdd/tdd]/normalization_stats.pkl`.
+The normalization stats will be saved in `z_artifacts/data/stats/[fdd/tdd]/normalization_stats.pkl`.
 
 ### 2. Model Training
 
@@ -231,7 +231,7 @@ Default output directory: `z_artifacts/config/cp/[model_name]/`
 python3 -m src.cp.main --hparams_csi_pred [config_file]
 ```
 
-For HPC clusters, use [`scripts/cp.slurm`](scripts/cp.slurm). Training outputs are saved in `z_artifacts/outputs/[TDD/FDD]/[model_name]/[date_time]/` with checkpoints in `ckpts/` and TensorBoard logs in `tb_logs/`.
+For HPC clusters, use [`scripts/cp_template.sh`](scripts/cp_template.sh). Training outputs are saved in `z_artifacts/outputs/[TDD/FDD]/[model_name]/[date_time]/` with checkpoints in `ckpts/` and TensorBoard logs in `tb_logs/`.
 
 View training progress:
 ```bash
@@ -266,7 +266,7 @@ Results saved in `z_artifacts/outputs/testing/computational_overhead/[date_time]
 
 #### Prediction Performance Testing
 
-For HPC clusters using SLURM array jobs (recommended), use [`scripts/testing.slurm`](scripts/testing.slurm) with array size matching `JOBS_PER_MODEL` in [`src/testing/config.py`](src/testing/config.py).
+For HPC clusters using SLURM array jobs (recommended), use [`scripts/testing.slurm`](scripts/testing.slurm) or [`scripts/testing_template.sh`](scripts/testing_template.sh) with array size matching `JOBS_PER_MODEL` in [`src/testing/config.py`](src/testing/config.py).
 
 For local execution:
 ```bash
@@ -302,6 +302,73 @@ python3 -m src.testing.vis.main
 ```
 
 Results saved in `z_artifacts/outputs/testing/vis/[date_time]/[line/radar/violin/table]/`.
+
+
+## Sample Outputs
+
+To better illustrate the usage of the framework, sample outputs are provided in the [`z_artifacts/`](z_artifacts/) directory. These examples demonstrate the complete workflow from configuration to final visualization results.
+
+### Configuration Files
+
+- **[`config/cp/rnn/`](z_artifacts/config/cp/rnn/)**: Sample configuration files for RNN model training
+  - [`fdd_rnn.yaml`](z_artifacts/config/cp/rnn/fdd_rnn.yaml): FDD scenario RNN configuration
+  - [`tdd_rnn.yaml`](z_artifacts/config/cp/rnn/tdd_rnn.yaml): TDD scenario RNN configuration
+
+### Noise Calibration Results
+
+- **[`noise/noise_degree/`](z_artifacts/outputs/noise/noise_degree/)**: Noise parameter calibration outputs
+  - [`decide_nd.json`](z_artifacts/outputs/noise/noise_degree/20250928_155913/decide_nd.json): Calibrated noise degree mappings for different noise types
+  - [`snr.csv`](z_artifacts/outputs/noise/noise_degree/20250928_155913/snr.csv): SNR measurement results across noise parameters
+
+### Model Training Results
+
+- **[`TDD/RNN/`](z_artifacts/outputs/TDD/RNN/)**: Sample training output for RNN model in TDD scenario
+  - [`ckpts/`](z_artifacts/outputs/TDD/RNN/2025-09-28_15-07-23/ckpts/): Model checkpoints including best and final weights
+  - [`config_copy.yaml`](z_artifacts/outputs/TDD/RNN/2025-09-28_15-07-23/config_copy.yaml): Training configuration backup
+  - [`tb_logs/`](z_artifacts/outputs/TDD/RNN/2025-09-28_15-07-23/tb_logs/): TensorBoard logs for training monitoring
+
+### Testing Performance Results
+
+The [`testing/`](z_artifacts/outputs/testing/) directory contains comprehensive evaluation results for both NP baseline and RNN models:
+
+#### Raw Testing Data
+- **[`computational_overhead/`](z_artifacts/outputs/testing/computational_overhead/)**: Performance profiling results
+  - [`computational_overhead.csv`](z_artifacts/outputs/testing/computational_overhead/20250928_164946/computational_overhead.csv): FLOPs, inference time, and parameter counts
+
+- **[`prediction_performance/`](z_artifacts/outputs/testing/prediction_performance/)**: Prediction accuracy results
+  - **[`NP/full_test/`](z_artifacts/outputs/testing/prediction_performance/NP/full_test/)**: NP baseline results obtained via local execution mode
+  - **[`RNN/slice_*/`](z_artifacts/outputs/testing/prediction_performance/RNN/)**: RNN results obtained via SLURM job slices (20 parallel jobs)
+
+#### Processed Analysis Results
+- **[`results/`](z_artifacts/outputs/testing/results/)**: Consolidated and analyzed testing data
+  - [`completion_reports/`](z_artifacts/outputs/testing/results/completion_reports/): Testing completion status verification
+  - [`gather/`](z_artifacts/outputs/testing/results/gather/): Consolidated raw results from all models and slices
+  - [`analysis/`](z_artifacts/outputs/testing/results/analysis/): Statistical analysis with rankings and distributions
+    - [`nmse/`](z_artifacts/outputs/testing/results/analysis/nmse/): NMSE-based performance analysis
+    - [`se/`](z_artifacts/outputs/testing/results/analysis/se/): Spectral efficiency-based performance analysis
+
+#### Visualization Results
+- **[`vis/`](z_artifacts/outputs/testing/vis/)**: Comprehensive visualization suite
+  - [`line/`](z_artifacts/outputs/testing/vis/20250928_194940/line/): Line plots showing performance across different conditions
+    - [`generalization/`](z_artifacts/outputs/testing/vis/20250928_194940/line/generalization/): Out-of-distribution performance
+    - [`regular/`](z_artifacts/outputs/testing/vis/20250928_194940/line/regular/): In-distribution performance  
+    - [`robustness/`](z_artifacts/outputs/testing/vis/20250928_194940/line/robustness/): Performance under noise conditions
+  - [`radar/`](z_artifacts/outputs/testing/vis/20250928_194940/radar/): Multi-dimensional performance comparison
+    - [`combined_radar_fdd.pdf`](z_artifacts/outputs/testing/vis/20250928_194940/radar/combined_radar_fdd.pdf): FDD scenario radar plot
+    - [`combined_radar_tdd.pdf`](z_artifacts/outputs/testing/vis/20250928_194940/radar/combined_radar_tdd.pdf): TDD scenario radar plot
+  - [`table/`](z_artifacts/outputs/testing/vis/20250928_194940/table/): Performance summary tables by channel model and delay spread
+  - [`violin/`](z_artifacts/outputs/testing/vis/20250928_194940/violin/): Distribution analysis across scenarios
+
+### Key Insights from Sample Results
+
+The provided sample outputs demonstrate:
+- **Execution Modes**: NP baseline uses local full_test mode while RNN uses distributed SLURM slices. The current testing framework supports both modes.
+- **Comprehensive Evaluation**: Testing covers regular, robustness, and generalization scenarios.
+- **Multi-Metric Analysis**: Both NMSE and spectral efficiency (SE) metrics are evaluated.
+- **Rich Visualizations**: Multiple plot types provide different perspectives on model performance.
+- **Scalable Framework**: The structure supports easy extension to additional models and scenarios.
+
+**For more comprehensive results and detailed analysis, please refer to the corresponding research paper.**
 
 
 ## Citation

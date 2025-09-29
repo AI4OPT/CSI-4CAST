@@ -54,7 +54,7 @@ def get_ckpt_path(model_name: str, scenario: str) -> str | None:
 
 
 def _get_eval_model(model_name: str, device: torch.device, scenario: str, ckpt_path: str | None = None):
-    """Internal function to load and prepare model for evaluation.
+    """Load and prepare model for evaluation (internal function).
 
     Args:
         model_name (str): Model identifier
@@ -145,6 +145,13 @@ class ForwardBackwardImputer(nn.Module):
     """
 
     def __init__(self, atol=1e-6, rtol=1e-3):
+        """Initialize the ForwardBackwardImputer.
+
+        Args:
+            atol (float): Absolute tolerance for zero detection
+            rtol (float): Relative tolerance for zero detection
+
+        """
         super().__init__()
         self.atol = atol
         self.rtol = rtol
@@ -247,6 +254,12 @@ class ModelWithImputer(nn.Module):
     """
 
     def __init__(self, base_model: nn.Module):
+        """Initialize the ModelWithImputer.
+
+        Args:
+            base_model (nn.Module): The base model to wrap with imputation
+
+        """
         super().__init__()
         self.base_model = base_model
         self.imputer = ForwardBackwardImputer(atol=1e-6, rtol=1e-3)
@@ -287,6 +300,12 @@ class LightningModelWithImputer(nn.Module):
     """
 
     def __init__(self, lightning_model):
+        """Initialize the LightningModelWithImputer.
+
+        Args:
+            lightning_model: PyTorch Lightning model to wrap
+
+        """
         super().__init__()
         self.lightning_model = lightning_model
         self.imputer = ForwardBackwardImputer(atol=1e-6, rtol=1e-3)
