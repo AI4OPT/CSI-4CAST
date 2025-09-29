@@ -323,7 +323,6 @@ To better illustrate the usage of the framework, sample outputs are provided in 
 ### Model Training Results
 
 - **[`TDD/RNN/`](z_artifacts/outputs/TDD/RNN/)**: Sample training output for RNN model in TDD scenario
-  - [`ckpts/`](z_artifacts/outputs/TDD/RNN/2025-09-28_15-07-23/ckpts/): Model checkpoints including best and final weights
   - [`config_copy.yaml`](z_artifacts/outputs/TDD/RNN/2025-09-28_15-07-23/config_copy.yaml): Training configuration backup
   - [`tb_logs/`](z_artifacts/outputs/TDD/RNN/2025-09-28_15-07-23/tb_logs/): TensorBoard logs for training monitoring
 
