@@ -14,7 +14,6 @@ CSI-4CAST/
 │   ├── data_gen_template.sh    # Template for data generation jobs
 │   ├── cp_template.sh         # Template for model training jobs
 │   ├── testing_template.sh    # Template for testing jobs
-│   ├── testing.slurm          # Model testing job script
 │   └── outs/                  # Job output logs
 ├── src/                        # Source code
 │   ├── data/                   # Data generation module
