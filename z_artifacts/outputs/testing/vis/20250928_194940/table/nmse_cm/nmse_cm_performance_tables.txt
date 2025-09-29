@@ -1,0 +1,68 @@
+NMSE CM Performance Analysis
+============================================================
+Generated for nmse_cm analysis:
+  Filtered to match channel model analysis criteria:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 1e-07, 3e-07] (ns)
+  - min_speed in [1, 10, 30]
+  - channel_model in ['A', 'B', 'C', 'D', 'E'] (analyzing these)
+Columns: A, C, D (Regular) | B, E (Generalization)
+Separate tables for TDD and FDD scenarios
+Values NMSE averaged across all matching conditions per model-cm combination
+============================================================
+
+NMSE CM Performance Table - TDD Scenario
+============================================================
+Data: Filtered to match channel model analysis criteria:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 1e-07, 3e-07] (ns)
+  - min_speed in [1, 10, 30]
+  - channel_model in ['A', 'B', 'C', 'D', 'E'] (analyzing these)
+Columns: A, C, D (Regular) | B, E (Generalization)
+Values: Averaged NMSE across all matching conditions
+============================================================
+
+| Model   |   A (Regular) |   C (Regular) |   D (Regular) |   B (Generalization) |   E (Generalization) |   Regular Avg |   Generalization Avg |
+|:--------|--------------:|--------------:|--------------:|---------------------:|---------------------:|--------------:|---------------------:|
+| RNN     |         0.207 |         0.264 |         0.044 |                0.394 |                0.057 |         0.172 |                0.225 |
+| NP      |         2.166 |         1.948 |         1.372 |                1.902 |                1.352 |         1.829 |                1.627 |
+
+Model Rankings:
+----------------------------------------
+By Regular Performance (A, C, D):
+  1. RNN: 0.172
+  2. NP: 1.829
+
+By Generalization Performance (B, E):
+  1. RNN: 0.225
+  2. NP: 1.627
+
+NMSE CM Performance Table - FDD Scenario
+============================================================
+Data: Filtered to match channel model analysis criteria:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 1e-07, 3e-07] (ns)
+  - min_speed in [1, 10, 30]
+  - channel_model in ['A', 'B', 'C', 'D', 'E'] (analyzing these)
+Columns: A, C, D (Regular) | B, E (Generalization)
+Values: Averaged NMSE across all matching conditions
+============================================================
+
+| Model   |   A (Regular) |   C (Regular) |   D (Regular) |   B (Generalization) |   E (Generalization) |   Regular Avg |   Generalization Avg |
+|:--------|--------------:|--------------:|--------------:|---------------------:|---------------------:|--------------:|---------------------:|
+| RNN     |         0.368 |         0.444 |         0.063 |                1.19  |                0.091 |         0.292 |                0.64  |
+| NP      |         3.857 |         2.934 |         1.415 |                3.028 |                1.419 |         2.736 |                2.223 |
+
+Model Rankings:
+----------------------------------------
+By Regular Performance (A, C, D):
+  1. RNN: 0.292
+  2. NP: 2.736
+
+By Generalization Performance (B, E):
+  1. RNN: 0.640
+  2. NP: 2.223
+

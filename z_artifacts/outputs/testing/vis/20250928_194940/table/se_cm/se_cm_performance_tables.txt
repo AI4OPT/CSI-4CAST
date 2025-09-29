@@ -1,0 +1,68 @@
+SE CM Performance Analysis
+============================================================
+Generated for se_cm analysis:
+  Filtered to match channel model analysis criteria:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 1e-07, 3e-07] (ns)
+  - min_speed in [1, 10, 30]
+  - channel_model in ['A', 'B', 'C', 'D', 'E'] (analyzing these)
+Columns: A, C, D (Regular) | B, E (Generalization)
+Separate tables for TDD and FDD scenarios
+Values SE averaged across all matching conditions per model-cm combination
+============================================================
+
+SE CM Performance Table - TDD Scenario
+============================================================
+Data: Filtered to match channel model analysis criteria:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 1e-07, 3e-07] (ns)
+  - min_speed in [1, 10, 30]
+  - channel_model in ['A', 'B', 'C', 'D', 'E'] (analyzing these)
+Columns: A, C, D (Regular) | B, E (Generalization)
+Values: Averaged SE across all matching conditions
+============================================================
+
+| Model   |   A (Regular) |   C (Regular) |   D (Regular) |   B (Generalization) |   E (Generalization) |   Regular Avg |   Generalization Avg |
+|:--------|--------------:|--------------:|--------------:|---------------------:|---------------------:|--------------:|---------------------:|
+| RNN     |         7.969 |         7.845 |         8.25  |                7.395 |                8.232 |         8.021 |                7.814 |
+| NP      |         7.72  |         7.504 |         8.011 |                7.297 |                7.995 |         7.745 |                7.646 |
+
+Model Rankings:
+----------------------------------------
+By Regular Performance (A, C, D):
+  1. RNN: 8.021
+  2. NP: 7.745
+
+By Generalization Performance (B, E):
+  1. RNN: 7.814
+  2. NP: 7.646
+
+SE CM Performance Table - FDD Scenario
+============================================================
+Data: Filtered to match channel model analysis criteria:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 1e-07, 3e-07] (ns)
+  - min_speed in [1, 10, 30]
+  - channel_model in ['A', 'B', 'C', 'D', 'E'] (analyzing these)
+Columns: A, C, D (Regular) | B, E (Generalization)
+Values: Averaged SE across all matching conditions
+============================================================
+
+| Model   |   A (Regular) |   C (Regular) |   D (Regular) |   B (Generalization) |   E (Generalization) |   Regular Avg |   Generalization Avg |
+|:--------|--------------:|--------------:|--------------:|---------------------:|---------------------:|--------------:|---------------------:|
+| RNN     |         7.778 |         7.612 |         8.244 |                5.896 |                8.202 |         7.878 |                7.049 |
+| NP      |         7.427 |         6.622 |         7.955 |                5.91  |                7.919 |         7.335 |                6.915 |
+
+Model Rankings:
+----------------------------------------
+By Regular Performance (A, C, D):
+  1. RNN: 7.878
+  2. NP: 7.335
+
+By Generalization Performance (B, E):
+  1. RNN: 7.049
+  2. NP: 6.915
+
