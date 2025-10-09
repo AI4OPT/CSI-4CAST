@@ -4,7 +4,6 @@ This script performs comprehensive computational overhead analysis for CSI predi
 measuring key performance metrics including:
 - Model complexity (parameter counts, FLOPs)
 - Runtime performance (inference and training time)
-- Memory usage patterns
 - Cross-scenario performance comparison (TDD vs FDD)
 
 The analysis generates detailed reports in multiple formats (CSV, JSON, console tables)
@@ -25,7 +24,6 @@ Output Structure:
 
 Usage:
     python3 -m src.testing.computational_overhead.main
-
 
 """
 
@@ -81,7 +79,7 @@ if __name__ == "__main__":
     logger.info("Using device - {} | {}".format(DEVICE, device_name if DEVICE.type == "cuda" else "CPU"))
 
     # Batch size configuration for testing
-    # Small batch size (1) used for consistent memory usage and timing measurements
+    # Small batch size (1) used for consistent timing measurements
     BATCH_SMALL = 1
 
     # Initialize result storage structures
@@ -91,7 +89,6 @@ if __name__ == "__main__":
     # Main testing loop - iterate through all scenarios and models
     for scenario in LIST_SCENARIOS:
         # Batch size loop (currently fixed to BATCH_SMALL for consistency)
-        # Note: The commented line shows where multiple batch sizes could be tested
         for batch_size in [BATCH_SMALL]:
             logger.info(f"Testing batch size: {batch_size}")
 

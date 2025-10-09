@@ -8,7 +8,7 @@ Key Features:
 - Subset-stratified splitting: Ensures all 27 parameter combinations are represented in both
   training and validation sets while preventing data leakage
 - Automatic data normalization using pre-computed statistics
-- Realistic noise addition during training and validation
+- Additional White Gaussian Noise during training and validation
 - Flexible antenna handling (separate vs. gathered antennas)
 - Memory-efficient data loading with proper collation functions
 
@@ -23,14 +23,12 @@ Usage:
 
     data_module = TrainValDataModule(data_config)
     data_module.setup()
-
-    train_loader = data_module.train_dataloader()
-    val_loader = data_module.val_dataloader()
 """
 
+from itertools import product
 import logging
-import random
 from pathlib import Path
+import random
 
 import lightning.pytorch as pl
 import torch
@@ -66,7 +64,7 @@ class TrainValDataModule(pl.LightningDataModule):
     - Data loading from multiple CSI scenarios
     - Subset-stratified train/validation splitting
     - Data normalization using pre-computed statistics
-    - Noise addition for realistic training conditions
+    - Additional White Gaussian Noise for realistic training conditions
     - Flexible data loading with configurable batch sizes and collation functions
 
     Args:
@@ -109,7 +107,7 @@ class TrainValDataModule(pl.LightningDataModule):
         1. Load each of the 27 subsets individually
         2. Split each subset according to train_ratio using consistent random seeding
         3. Aggregate all training splits and all validation splits
-        4. Apply normalization and noise to the aggregated datasets
+        4. Apply normalization and additional White Gaussian Noise to the aggregated datasets
         """
         H_hist_train_list = []
         H_pred_train_list = []
@@ -123,62 +121,70 @@ class TrainValDataModule(pl.LightningDataModule):
         logger.info(f"🔄 Loading data with subset-stratified splitting (train_ratio={self.data_cfg.train_ratio})")
 
         # Process each subset individually
-        for cm in LIST_CHANNEL_MODEL:
-            for ds in LIST_DELAY_SPREAD:
-                for ms in LIST_MIN_SPEED_TRAIN:
-                    # Load this specific subset
-                    H_hist_subset = _load_data(
-                        dir_data=Path(self.data_cfg.dir_dataset),
-                        cm=cm,
-                        ds=ds,
-                        ms=ms,
-                        is_train=True,
-                        is_gen=False,
-                        is_hist=True,
-                        is_U2D=self.data_cfg.is_U2D,
-                    )
+        for cm, ds, ms in product(LIST_CHANNEL_MODEL, LIST_DELAY_SPREAD, LIST_MIN_SPEED_TRAIN):
+            # Load this specific subset
+            H_hist_subset = _load_data(
+                dir_data=Path(self.data_cfg.dir_dataset),
+                cm=cm,
+                ds=ds,
+                ms=ms,
+                is_train=True,
+                is_gen=False,
+                is_hist=True,
+                is_U2D=self.data_cfg.is_U2D,
+            )
 
-                    H_pred_subset = _load_data(
-                        dir_data=Path(self.data_cfg.dir_dataset),
-                        cm=cm,
-                        ds=ds,
-                        ms=ms,
-                        is_train=True,
-                        is_gen=False,
-                        is_hist=False,
-                        is_U2D=self.data_cfg.is_U2D,
-                    )
+            H_pred_subset = _load_data(
+                dir_data=Path(self.data_cfg.dir_dataset),
+                cm=cm,
+                ds=ds,
+                ms=ms,
+                is_train=True,
+                is_gen=False,
+                is_hist=False,
+                is_U2D=self.data_cfg.is_U2D,
+            )
 
-                    # Split this subset according to train_ratio
-                    subset_size = len(H_hist_subset)
-                    train_size = int(subset_size * self.data_cfg.train_ratio)
+            # Split this subset according to train_ratio
+            subset_size = len(H_hist_subset)
+            train_size = int(subset_size * self.data_cfg.train_ratio)
 
-                    # Use consistent indexing for reproducible splits
-                    indices = torch.randperm(subset_size, generator=torch.Generator().manual_seed(42))
-                    train_indices = indices[:train_size]
-                    val_indices = indices[train_size:]
+            # Use consistent indexing for reproducible splits
+            indices = torch.randperm(subset_size, generator=torch.Generator().manual_seed(42))
+            train_indices = indices[:train_size]
+            val_indices = indices[train_size:]
 
-                    # Split the subset
-                    H_hist_train_subset = H_hist_subset[train_indices]
-                    H_pred_train_subset = H_pred_subset[train_indices]
-                    H_hist_val_subset = H_hist_subset[val_indices]
-                    H_pred_val_subset = H_pred_subset[val_indices]
+            # Split the subset
+            H_hist_train_subset = H_hist_subset[train_indices]
+            H_pred_train_subset = H_pred_subset[train_indices]
+            H_hist_val_subset = H_hist_subset[val_indices]
+            H_pred_val_subset = H_pred_subset[val_indices]
 
-                    # Add to respective lists
-                    H_hist_train_list.append(H_hist_train_subset)
-                    H_pred_train_list.append(H_pred_train_subset)
-                    H_hist_val_list.append(H_hist_val_subset)
-                    H_pred_val_list.append(H_pred_val_subset)
+            # Add to respective lists
+            H_hist_train_list.append(H_hist_train_subset)
+            H_pred_train_list.append(H_pred_train_subset)
+            H_hist_val_list.append(H_hist_val_subset)
+            H_pred_val_list.append(H_pred_val_subset)
 
-                    # Track statistics
-                    total_subsets += 1
-                    total_train_samples += len(H_hist_train_subset)
-                    total_val_samples += len(H_hist_val_subset)
+            # Track statistics
+            total_subsets += 1
+            total_train_samples += len(H_hist_train_subset)
+            total_val_samples += len(H_hist_val_subset)
 
-                    logger.info(
-                        f"📊 Subset CM={cm}, DS={round(ds * 1e9)}ns, MS={ms}: "
-                        f"{subset_size} total → {len(H_hist_train_subset)} train, {len(H_hist_val_subset)} val"
-                    )
+            logger.info(
+                f"📊 Subset CM={cm}, DS={round(ds * 1e9)}ns, MS={ms}: "
+                f"{subset_size} total → {len(H_hist_train_subset)} train, {len(H_hist_val_subset)} val"
+            )
+
+            # Free memory for this subset's original data
+            del (
+                H_hist_subset,
+                H_pred_subset,
+                H_hist_train_subset,
+                H_pred_train_subset,
+                H_hist_val_subset,
+                H_pred_val_subset,
+            )
 
         # Concatenate all training data
         H_hist_train = torch.cat(H_hist_train_list, dim=0)
@@ -187,6 +193,9 @@ class TrainValDataModule(pl.LightningDataModule):
         # Concatenate all validation data
         H_hist_val = torch.cat(H_hist_val_list, dim=0)
         H_pred_val = torch.cat(H_pred_val_list, dim=0)
+
+        # Free memory by deleting intermediate lists
+        del H_hist_train_list, H_pred_train_list, H_hist_val_list, H_pred_val_list
 
         logger.info("✅ Stratified split completed:")
         logger.info(f"   📈 {total_subsets} subsets processed")

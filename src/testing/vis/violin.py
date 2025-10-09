@@ -28,10 +28,10 @@ The violin plots provide insights into:
 
 from pathlib import Path
 
+from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
-from matplotlib.lines import Line2D
 
 from src.utils.dirs import DIR_OUTPUTS
 from src.utils.vis_utils import get_display_name, plt_styles, set_plot_style, vis_config

@@ -36,8 +36,8 @@ Usage:
     python3 -m src.cp.config.config --model RNN --is_U2D
 """
 
-import json
 from dataclasses import dataclass, field
+import json
 from pathlib import Path
 from typing import Any, Literal
 
@@ -69,18 +69,12 @@ class DataConfig:
             - Each antenna's CSI is treated as an independent sample
             - Data shape transformation: [batch, antennas, time, freq] → [batch*antennas, time, freq*2]
             - Complex values converted to real [real, imag] representation
-            - Effective batch size increases by factor of num_antennas
-            - Use case: When antennas have independent channel characteristics
             - Data preprocessing: collect_fn_separate_antennas() in src.utils.data_utils
-            - Memory efficient for models that don't need spatial correlation
 
         When False (Gather Antennas):
             - All antennas processed together maintaining spatial structure
             - Data shape preserved: [batch, antennas, time, freq] (complex-valued)
-            - Preserves spatial correlation between antennas
-            - Use case: When leveraging antenna array spatial properties
             - Data preprocessing: collect_fn_gather_antennas() in src.utils.data_utils
-            - Required for models that exploit spatial diversity
 
         Note: This parameter must be consistent between DataConfig and ModelConfig
               to ensure proper data flow through the training pipeline.

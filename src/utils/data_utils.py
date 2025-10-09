@@ -51,8 +51,8 @@ Usage:
     data = load_data(data_dir, cm="A", ds=30e-9, ms=5, is_train=True)
 """
 
-import logging
 from itertools import product
+import logging
 from pathlib import Path
 
 import torch

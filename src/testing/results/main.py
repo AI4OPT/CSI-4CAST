@@ -42,8 +42,8 @@ Dependencies:
     - src.testing.results.analysis_df: For comprehensive performance analysis
 """
 
-import sys
 from pathlib import Path
+import sys
 
 from src.testing.results.analysis_df import CSIResultsAnalyzer
 from src.testing.results.check_completion import check_testing_completion

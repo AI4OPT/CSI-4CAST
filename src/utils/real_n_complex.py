@@ -14,8 +14,8 @@ real-valued neural network layers.
 The module uses einops for efficient tensor rearrangement operations.
 """
 
-import torch
 from einops import rearrange
+import torch
 
 
 def real_flat_to_complex(x: torch.Tensor) -> torch.Tensor:

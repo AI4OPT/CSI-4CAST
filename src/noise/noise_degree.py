@@ -3,13 +3,13 @@
 This module performs comprehensive analysis of noise characteristics and calibrates
 noise degrees to achieve target SNR levels. It generates mappings between noise
 degrees and actual SNR values for different noise types, enabling consistent
-noise application across different testing scenarios.
+noise application across different scenarios.
 
 The main script performs:
 1. Power computation for signal and noise
 2. SNR analysis across different noise degrees
 3. Reverse engineering to find optimal noise degrees for target SNRs
-4. Generation of calibration mappings for testing
+4. Generation of calibration mappings for scenarios
 
 Functions:
     compute_power: Calculate average power of complex-valued signals
@@ -24,12 +24,11 @@ def compute_power(data: torch.Tensor) -> torch.Tensor:
     """Compute the average power of a complex-valued signal.
 
     Power is calculated as the mean of squared magnitudes across all tensor elements.
-    For complex signals, power = E[|data|^2] = E[real^2 + imag^2].
 
     Args:
         data (torch.Tensor): Complex-valued tensor with shape
                            [batch_size, num_antennas, hist_len, num_subcarriers].
-                           Must be complex dtype (torch.complex64 or torch.complex128).
+                           Must be complex dtype.
 
     Returns:
         torch.Tensor: Real-valued scalar representing the average power.
@@ -81,8 +80,8 @@ if __name__ == "__main__":
     and degrees, then generates optimal noise degree mappings for target SNR levels.
 
     Process:
-    1. Load and normalize test datasets from different channel conditions
-    2. Compute signal power for each dataset
+    1. Load and normalize calibration datasets from different channel conditions
+    2. Compute signal power for each calibration dataset
     3. Generate noise at various degrees and compute resulting SNR
     4. Perform reverse engineering to find optimal noise degrees for target SNRs
     5. Save results and mappings for use in testing
@@ -90,9 +89,10 @@ if __name__ == "__main__":
     Outputs:
     - snr.csv: Detailed SNR analysis results
     - decide_nd.json: Optimal noise degree mappings for target SNRs
+
     """
-    import json
     from itertools import product
+    import json
     from pathlib import Path
 
     import numpy as np
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     from tqdm import tqdm
 
     from src.noise.noise import gen_burst_noise_nd, gen_phase_noise_nd
-    from src.utils.data_utils import LIST_CHANNEL_MODEL, LIST_DELAY_SPREAD, LIST_MIN_SPEED_TEST, load_data
+    from src.utils.data_utils import LIST_CHANNEL_MODEL, LIST_DELAY_SPREAD, LIST_MIN_SPEED_TRAIN, load_data
     from src.utils.dirs import DIR_DATA, DIR_OUTPUTS
     from src.utils.main_utils import make_logger
     from src.utils.norm_utils import normalize_input
@@ -120,25 +120,24 @@ if __name__ == "__main__":
 
     dir_data = Path(DIR_DATA)
 
-    # ===== PHASE 1: Load and preprocess testing datasets =====
-    logger.info("Phase 1: Loading and preprocessing testing datasets...")
+    # ===== PHASE 1: Load and preprocess calibration datasets =====
+    logger.info("Phase 1: Loading and preprocessing calibration datasets...")
 
-    # Load testing datasets from all combinations of channel conditions
-    # This ensures our noise calibration works across different scenarios
-    list_testing_dataset = []
+    # Load calibration datasets from all combinations of channel conditions
+    list_calibration_dataset = []
     list_signal_powers = []
 
     # Iterate through all combinations of channel model, delay spread, and minimum speed
-    for cm, ds, ms in list(product(LIST_CHANNEL_MODEL, LIST_DELAY_SPREAD, LIST_MIN_SPEED_TEST)):
-        logger.info(f"Loading dataset: CM={cm}, DS={ds}, MS={ms}")
+    for cm, ds, ms in list(product(LIST_CHANNEL_MODEL, LIST_DELAY_SPREAD, LIST_MIN_SPEED_TRAIN)):
+        logger.info(f"Loading calibration dataset: CM={cm}, DS={ds}, MS={ms}")
 
-        # Load historical CSI data for testing (not training or generated data)
+        # Load historical CSI data for calibration
         h_hist = load_data(
             dir_data=dir_data,
             list_cm=[cm],  # Channel model
             list_ds=[ds],  # Delay spread
-            list_ms=[ms],  # Minimum speed
-            is_train=False,  # Use test data
+            list_ms=[ms],  # Minimum speed (using training speeds)
+            is_train=True,  # Use TRAINING data for calibration
             is_gen=False,  # Use real data (not generated)
             is_hist=True,  # Load historical data
             is_U2D=False,  # Use full CSI data (not U2D format)
@@ -150,10 +149,10 @@ if __name__ == "__main__":
         # Compute and store signal power for this dataset (done once for efficiency)
         power_signal = compute_power(h_hist)
 
-        list_testing_dataset.append(h_hist)
+        list_calibration_dataset.append(h_hist)
         list_signal_powers.append(power_signal)
 
-    logger.info(f"Loaded {len(list_testing_dataset)} testing datasets")
+    logger.info(f"Loaded {len(list_calibration_dataset)} calibration datasets")
 
     # ===== PHASE 2: Generate noise and compute SNR relationships =====
     logger.info("Phase 2: Analyzing SNR vs noise degree relationships...")
@@ -180,15 +179,15 @@ if __name__ == "__main__":
         noise_degrees = np.concatenate([dense_range, sparse_range])
         noise_degrees = np.unique(noise_degrees)  # Remove duplicates and sort
 
-        logger.info(f"Testing {len(noise_degrees)} noise degrees for {noise_type} noise")
+        logger.info(f"Computing {len(noise_degrees)} noise degrees for {noise_type} noise")
 
         # Process each noise degree and compute SNR statistics
         for noise_degree in tqdm(noise_degrees, desc=f"Processing {noise_type} noise"):
             try:
                 snr_list = []
 
-                # Apply current noise degree to all test datasets
-                for h_hist, power_signal in zip(list_testing_dataset, list_signal_powers, strict=False):
+                # Apply current noise degree to all calibration datasets
+                for h_hist, power_signal in zip(list_calibration_dataset, list_signal_powers, strict=False):
                     try:
                         # Generate noise at current degree
                         noise = noise_func(h_hist, float(noise_degree))
@@ -208,9 +207,9 @@ if __name__ == "__main__":
                         logger.error(f"Error processing dataset for {noise_type} with degree {noise_degree}: {e}")
                         continue
 
-                # Compute SNR statistics across all datasets
+                # Compute SNR statistics across all calibration datasets
                 if snr_list:
-                    snr_mean = np.mean(snr_list)  # Average SNR across datasets
+                    snr_mean = np.mean(snr_list)  # Average SNR across calibration datasets
                     snr_std = np.std(snr_list)  # Standard deviation of SNR
                 else:
                     snr_mean = np.nan

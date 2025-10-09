@@ -26,12 +26,12 @@ The timing functions use proper statistical methods with warmup periods to ensur
 accurate measurements, accounting for CUDA kernel initialization and cache effects.
 """
 
-import time
 from contextlib import nullcontext
+import time
 
+from deepspeed.profiling.flops_profiler import get_model_profile
 import lightning.pytorch as pl
 import torch
-from deepspeed.profiling.flops_profiler import get_model_profile
 from tqdm import tqdm
 
 from src.utils.data_utils import HIST_LEN, NUM_SUBCARRIERS, TOT_ANTENNAS

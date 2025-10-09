@@ -16,9 +16,9 @@ The test_unit function is the main entry point called by the orchestration scrip
 for each parameter combination that needs to be evaluated.
 """
 
+from collections.abc import Callable
 import gc
 import logging
-from collections.abc import Callable
 from pathlib import Path
 
 import lightning.pytorch as pl

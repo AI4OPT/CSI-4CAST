@@ -21,7 +21,7 @@ Usage:
     from src.cp.loss.loss import LOSS
 
     # Initialize loss function
-    criterion = LOSS.NMSE()
+    criterion = getattr(LOSS, "NMSE")()
 
     # Compute loss
     loss = criterion(predictions, targets)
@@ -30,8 +30,8 @@ Usage:
     step_losses = criterion(predictions, targets, by_step=True)
 """
 
-import torch
 from einops import rearrange
+import torch
 from torch import nn
 
 from src.utils.data_utils import TOT_ANTENNAS

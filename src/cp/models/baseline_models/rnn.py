@@ -1,7 +1,6 @@
 """RNN-based CSI Prediction Model.
 
 Sequence-to-sequence RNN with encoder-decoder architecture for CSI prediction.
-Supports separate/gather antenna processing modes (see src.utils.data_utils).
 
 Attribution:
     Modified from: [LLM4CP](https://github.com/liuboxun/LLM4CP/blob/master/models/model.py)

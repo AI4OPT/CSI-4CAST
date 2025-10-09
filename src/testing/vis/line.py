@@ -23,9 +23,9 @@ Output Structure:
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FixedFormatter, FixedLocator, NullFormatter
 import numpy as np
 import pandas as pd
-from matplotlib.ticker import FixedFormatter, FixedLocator, NullFormatter
 
 from src.utils.data_utils import (
     LIST_CHANNEL_MODEL,

@@ -17,8 +17,8 @@ but applied separately to real and imaginary components of complex CSI data.
 
 from __future__ import annotations
 
-import pickle
 from pathlib import Path
+import pickle
 
 import torch
 

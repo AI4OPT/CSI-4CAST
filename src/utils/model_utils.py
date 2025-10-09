@@ -10,8 +10,8 @@ and fresh initialization (for new training runs).
 """
 
 import logging
-import re
 from pathlib import Path
+import re
 
 import lightning.pytorch as pl
 import torch
