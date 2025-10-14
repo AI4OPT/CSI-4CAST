@@ -238,7 +238,9 @@ def scan_local_completion_status(
     return results
 
 
-def scan_completion_status() -> list[dict]:
+def scan_completion_status(
+    base_prediction_performance: Path = Path(DIR_OUTPUTS) / "testing" / "prediction_performance",
+) -> list[dict]:
     """Scan all output directories and collect completion status.
 
     Returns:
@@ -246,7 +248,6 @@ def scan_completion_status() -> list[dict]:
 
     """
     results = []
-    base_prediction_performance = Path(DIR_OUTPUTS) / "testing" / "prediction_performance"
 
     if not base_prediction_performance.exists():
         print(f"Output directory does not exist: {base_prediction_performance}")
@@ -465,12 +466,12 @@ def check_testing_completion(
         print(f"Total slices to check: {len(LIST_MODELS) * JOBS_PER_MODEL}")
         print("\nScanning slice directories...")
 
-    slice_results = scan_completion_status()
+    slice_results = scan_completion_status(base_prediction_performance)
     all_results.extend(slice_results)
 
     if verbose:
         print("\nScanning local full_test directories...")
-    local_results = scan_local_completion_status()
+    local_results = scan_local_completion_status(base_prediction_performance)
     all_results.extend(local_results)
 
     if not all_results:

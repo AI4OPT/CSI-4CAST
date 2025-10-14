@@ -265,7 +265,7 @@ if __name__ == "__main__":
 
     This section demonstrates the usage of all noise generation functions
     with sample CSI data tensors.
-    
+
     """
     # Create sample complex CSI data tensor
     # Shape: [batch_size=5, num_antennas=32, hist_len=16, num_subcarriers=300]

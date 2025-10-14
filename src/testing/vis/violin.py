@@ -229,7 +229,7 @@ def create_violin_plot(
         max_rank = violin_df["rank"].max() if len(violin_df) > 0 else len(models_sorted)
         ax2.set_ylim(-20, 110)
         ax2.set_ylabel(r"$\mathbf{P}_{\mathrm{rank1}}$", fontweight="bold", color="crimson")
-        ax2.set_yticks(range(0, 101, 20))  # only show 0–100
+        ax2.set_yticks(range(0, 101, 20))  # only show 0-100
         ax2.tick_params(axis="y", labelcolor="crimson")
 
         # =============================================================
@@ -353,7 +353,8 @@ def plot_violin(
 
     Parameters
     ----------
-    ----------\n    dir_se_analysis : Path
+    ----------
+    dir_se_analysis : Path
         Directory containing SE analysis results with rank_distributions.csv.
     dir_nmse_analysis : Path
         Directory containing NMSE analysis results with rank_distributions.csv.
