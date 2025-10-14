@@ -1,0 +1,62 @@
+accelerator: auto
+data:
+  batch_size: 16
+  dir_dataset: z_artifacts/data
+  is_U2D: true
+  is_separate_antennas: true
+  num_workers: 1
+  shuffle: true
+  train_ratio: 0.9
+deterministic: false
+devices: 1
+experiment_name: FDD_RNN
+loss:
+  name: NMSE
+  params: {}
+model:
+  checkpoint_path: null
+  is_separate_antennas: true
+  name: RNN_FDD
+  params:
+    dim_data: 600
+    pred_len: 4
+    rnn_hidden_dim: 1200
+    rnn_num_layers: 4
+model_name: RNN
+optimizer:
+  name: Adam
+  params:
+    betas:
+    - 0.9
+    - 0.999
+    eps: 1.0e-08
+    lr: 0.0005
+    weight_decay: 0.0001
+output_dir: z_artifacts/outputs/FDD/RNN
+precision: '32'
+prefix: FDD
+scheduler:
+  name: ReduceLROnPlateau
+  params:
+    cooldown: 5
+    factor: 0.1
+    min_lr: 1.0e-06
+    mode: min
+    patience: 10
+    threshold: 0.0001
+seed: 42
+training:
+  accumulate_grad_batches: 1
+  check_val_every_n_epoch: 1
+  early_stopping: true
+  early_stopping_min_delta: 0.0001
+  early_stopping_mode: min
+  early_stopping_patience: 20
+  enable_model_summary: true
+  enable_progress_bar: true
+  gradient_clip_val: null
+  log_every_n_steps: 50
+  monitor_metric: val_loss
+  monitor_mode: min
+  num_epochs: 500
+  save_top_k: 1

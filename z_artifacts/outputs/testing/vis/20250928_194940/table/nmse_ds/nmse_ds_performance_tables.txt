@@ -1,0 +1,68 @@
+NMSE DS Performance Analysis
+============================================================
+Generated for nmse_ds analysis:
+  Filtered for delay spread analysis:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 5e-08, 1e-07, 2e-07, 3e-07, 4e-07] (ns) - analyzing these
+  - min_speed in [1, 10, 30] (regular)
+  - channel_model in ['A', 'C', 'D'] (regular)
+Columns: 30ns, 100ns, 300ns (Regular) | 50ns, 200ns, 400ns (Generalization)
+Separate tables for TDD and FDD scenarios
+Values NMSE averaged across all matching conditions per model-ds combination
+============================================================
+
+NMSE DS Performance Table - TDD Scenario
+============================================================
+Data: Filtered for delay spread analysis:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 5e-08, 1e-07, 2e-07, 3e-07, 4e-07] (ns) - analyzing these
+  - min_speed in [1, 10, 30] (regular)
+  - channel_model in ['A', 'C', 'D'] (regular)
+Columns: 30ns, 100ns, 300ns (Regular) | 50ns, 200ns, 400ns (Generalization)
+Values: Averaged NMSE across all matching conditions
+============================================================
+
+| Model   |   3e-08 (Regular) |   3e-07 (Regular) |   2e-07 (Regular) |   1e-07 (Generalization) |   5e-08 (Generalization) |   4e-07 (Generalization) |   Regular Avg |   Generalization Avg |
+|:--------|------------------:|------------------:|------------------:|-------------------------:|-------------------------:|-------------------------:|--------------:|---------------------:|
+| RNN     |             0.191 |             0.168 |             0.156 |                    0.177 |                    0.164 |                    0.282 |         0.172 |                0.208 |
+| NP      |             2.246 |             1.714 |             1.526 |                    1.891 |                    1.499 |                    1.466 |         1.829 |                1.619 |
+
+Model Rankings:
+----------------------------------------
+By Regular Performance (30ns, 100ns, 300ns):
+  1. RNN: 0.172
+  2. NP: 1.829
+
+By Generalization Performance (50ns, 200ns, 400ns):
+  1. RNN: 0.208
+  2. NP: 1.619
+
+NMSE DS Performance Table - FDD Scenario
+============================================================
+Data: Filtered for delay spread analysis:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 5e-08, 1e-07, 2e-07, 3e-07, 4e-07] (ns) - analyzing these
+  - min_speed in [1, 10, 30] (regular)
+  - channel_model in ['A', 'C', 'D'] (regular)
+Columns: 30ns, 100ns, 300ns (Regular) | 50ns, 200ns, 400ns (Generalization)
+Values: Averaged NMSE across all matching conditions
+============================================================
+
+| Model   |   3e-08 (Regular) |   3e-07 (Regular) |   2e-07 (Regular) |   1e-07 (Generalization) |   5e-08 (Generalization) |   4e-07 (Generalization) |   Regular Avg |   Generalization Avg |
+|:--------|------------------:|------------------:|------------------:|-------------------------:|-------------------------:|-------------------------:|--------------:|---------------------:|
+| RNN     |             0.301 |             0.318 |             0.255 |                    0.426 |                    0.929 |                    1.33  |         0.292 |                0.895 |
+| NP      |             2.799 |             2.919 |             2.488 |                    3.046 |                    2.312 |                    2.025 |         2.736 |                2.461 |
+
+Model Rankings:
+----------------------------------------
+By Regular Performance (30ns, 100ns, 300ns):
+  1. RNN: 0.292
+  2. NP: 2.736
+
+By Generalization Performance (50ns, 200ns, 400ns):
+  1. RNN: 0.895
+  2. NP: 2.461
+

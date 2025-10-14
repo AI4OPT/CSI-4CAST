@@ -1,0 +1,68 @@
+SE DS Performance Analysis
+============================================================
+Generated for se_ds analysis:
+  Filtered for delay spread analysis:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 5e-08, 1e-07, 2e-07, 3e-07, 4e-07] (ns) - analyzing these
+  - min_speed in [1, 10, 30] (regular)
+  - channel_model in ['A', 'C', 'D'] (regular)
+Columns: 30ns, 100ns, 300ns (Regular) | 50ns, 200ns, 400ns (Generalization)
+Separate tables for TDD and FDD scenarios
+Values SE averaged across all matching conditions per model-ds combination
+============================================================
+
+SE DS Performance Table - TDD Scenario
+============================================================
+Data: Filtered for delay spread analysis:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 5e-08, 1e-07, 2e-07, 3e-07, 4e-07] (ns) - analyzing these
+  - min_speed in [1, 10, 30] (regular)
+  - channel_model in ['A', 'C', 'D'] (regular)
+Columns: 30ns, 100ns, 300ns (Regular) | 50ns, 200ns, 400ns (Generalization)
+Values: Averaged SE across all matching conditions
+============================================================
+
+| Model   |   3e-08 (Regular) |   3e-07 (Regular) |   2e-07 (Regular) |   1e-07 (Generalization) |   5e-08 (Generalization) |   4e-07 (Generalization) |   Regular Avg |   Generalization Avg |
+|:--------|------------------:|------------------:|------------------:|-------------------------:|-------------------------:|-------------------------:|--------------:|---------------------:|
+| RNN     |             8.004 |             8.011 |             8.048 |                    8.018 |                    8.024 |                    7.823 |         8.021 |                7.955 |
+| NP      |             7.761 |             7.739 |             7.735 |                    7.776 |                    7.782 |                    7.743 |         7.745 |                7.767 |
+
+Model Rankings:
+----------------------------------------
+By Regular Performance (30ns, 100ns, 300ns):
+  1. RNN: 8.021
+  2. NP: 7.745
+
+By Generalization Performance (50ns, 200ns, 400ns):
+  1. RNN: 7.955
+  2. NP: 7.767
+
+SE DS Performance Table - FDD Scenario
+============================================================
+Data: Filtered for delay spread analysis:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 5e-08, 1e-07, 2e-07, 3e-07, 4e-07] (ns) - analyzing these
+  - min_speed in [1, 10, 30] (regular)
+  - channel_model in ['A', 'C', 'D'] (regular)
+Columns: 30ns, 100ns, 300ns (Regular) | 50ns, 200ns, 400ns (Generalization)
+Values: Averaged SE across all matching conditions
+============================================================
+
+| Model   |   3e-08 (Regular) |   3e-07 (Regular) |   2e-07 (Regular) |   1e-07 (Generalization) |   5e-08 (Generalization) |   4e-07 (Generalization) |   Regular Avg |   Generalization Avg |
+|:--------|------------------:|------------------:|------------------:|-------------------------:|-------------------------:|-------------------------:|--------------:|---------------------:|
+| RNN     |             7.892 |             7.829 |             7.913 |                    7.737 |                    7.238 |                    6.991 |         7.878 |                7.322 |
+| NP      |             7.613 |             7.079 |             7.313 |                    7.408 |                    7.41  |                    7.37  |         7.335 |                7.396 |
+
+Model Rankings:
+----------------------------------------
+By Regular Performance (30ns, 100ns, 300ns):
+  1. RNN: 7.878
+  2. NP: 7.335
+
+By Generalization Performance (50ns, 200ns, 400ns):
+  1. NP: 7.396
+  2. RNN: 7.322
+
