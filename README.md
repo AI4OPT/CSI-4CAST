@@ -2,7 +2,7 @@
 
 CSI-4CAST is a comprehensive framework for generating and evaluating Channel State Information (CSI) prediction models using 3GPP TR 38.901 channel models. The repository provides tools for large-scale dataset generation, model training, and comprehensive evaluation with support for both high-performance computing environments ([Phoenix HPC](https://pace.gatech.edu/phoenix-cluster/)) and direct execution on local machines.
 
-This framework is developed as part of our research paper [**CSI-4CAST: A Hybrid Deep Learning Model for CSI Prediction with Comprehensive Robustness and Generalization Testing**](https://arxiv.org/abs/25xx.xxxxx).  A BibTeX entry for citation is provided at the end of this page.
+This framework is developed as part of our research paper [**CSI-4CAST: A Hybrid Deep Learning Model for CSI Prediction with Comprehensive Robustness and Generalization Testing**](https://arxiv.org/abs/2510.12996).  A BibTeX entry for citation is provided at the end of this page.
 
 ## Repository Structure
 
@@ -376,7 +376,15 @@ The provided sample outputs demonstrate:
 If you use this framework in your research, please cite the corresponding paper:
 
 ```bibtex
-[Citation information to be added]
+@misc{cheng2025csi4casthybriddeeplearning,
+      title={CSI-4CAST: A Hybrid Deep Learning Model for CSI Prediction with Comprehensive Robustness and Generalization Testing}, 
+      author={Sikai Cheng and Reza Zandehshahvar and Haoruo Zhao and Daniel A. Garcia-Ulloa and Alejandro Villena-Rodriguez and Carles Navarro Manchón and Pascal Van Hentenryck},
+      year={2025},
+      eprint={2510.12996},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG},
+      url={https://arxiv.org/abs/2510.12996}, 
+}
 ```
 
 ## License
