@@ -1,0 +1,36 @@
+name: MODEL3
+is_separate_antennas: true
+params:
+  arl_is_U2D: false
+  arl_subcarrier_proj_arl_operation: multiply
+  arl_subcarrier_proj_hidden_dim: 128
+  arl_subcarrier_proj_is_arl: true
+  arl_subcarrier_proj_num_layers: 2
+  arl_subcarrier_proj_output_activation_name: tanh
+  arl_temporal_proj_arl_operation: multiply
+  arl_temporal_proj_hidden_dim: 512
+  arl_temporal_proj_is_arl: false
+  arl_temporal_proj_num_layers: 4
+  arl_temporal_proj_output_activation_name: none
+  denoiser_activation: relu
+  denoiser_filter_size_1d: 3
+  denoiser_filter_size_2d: 3
+  denoiser_is_post_processor: false
+  denoiser_is_residual: true
+  denoiser_num_filters_2d: 3
+  dim_data: 600
+  dim_model: 768
+  embedding_dropout: 0.1
+  embedding_embed: timeF
+  embedding_freq: h
+  embedding_num_res_layers: 4
+  embedding_res_dim: 64
+  embedding_res_groups: 4
+  embedding_ca_ratio: 2
+  hist_len: 16
+  pred_len: 4
+  transformer_dropout_prob: 0.1
+  transformer_hidden_dim: 512
+  transformer_num_heads: 8
+  transformer_num_layers: 6
+checkpoint_path: null

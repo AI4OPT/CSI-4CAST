@@ -1,0 +1,35 @@
+name: MODEL1
+is_separate_antennas: true
+params:
+  arl_is_U2D: true
+  arl_subcarrier_proj_arl_operation: add
+  arl_subcarrier_proj_hidden_dim: 2048
+  arl_subcarrier_proj_is_arl: true
+  arl_subcarrier_proj_num_layers: 3
+  arl_subcarrier_proj_output_activation_name: relu
+  arl_temporal_proj_arl_operation: add
+  arl_temporal_proj_hidden_dim: 512
+  arl_temporal_proj_is_arl: false
+  arl_temporal_proj_num_layers: 4
+  arl_temporal_proj_output_activation_name: none
+  denoiser_activation: relu
+  denoiser_filter_size_1d: 3
+  denoiser_filter_size_2d: 3
+  denoiser_is_post_processor: false
+  denoiser_is_residual: true
+  denoiser_num_filters_2d: 5
+  dim_data: 600
+  dim_model: 768
+  embedding_dropout: 0.1
+  embedding_embed: timeF
+  embedding_freq: h
+  embedding_num_res_layers: 4
+  embedding_res_dim: 128
+  embedding_res_groups: 8
+  hist_len: 16
+  pred_len: 4
+  transformer_dropout_prob: 0.2
+  transformer_hidden_dim: 2048
+  transformer_num_heads: 4
+  transformer_num_layers: 4
+checkpoint_path: null

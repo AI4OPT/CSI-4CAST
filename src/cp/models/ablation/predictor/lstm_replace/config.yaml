@@ -1,0 +1,94 @@
+accelerator: auto
+data:
+  batch_size: 16
+  dir_dataset: z_artifacts/data
+  is_U2D: false
+  is_separate_antennas: true
+  num_workers: 1
+  shuffle: true
+  train_ratio: 0.9
+deterministic: false
+devices: 1
+experiment_name: TDD_ABL_LSTM_REPLACE_PRED
+loss:
+  name: NMSE
+  params: {}
+model:
+  checkpoint_path: null
+  is_separate_antennas: true
+  name: ABL_LSTM_REPLACE_PRED
+  params:
+    arl_is_U2D: false
+    arl_subcarrier_proj_arl_operation: multiply
+    arl_subcarrier_proj_hidden_dim: 128
+    arl_subcarrier_proj_is_arl: true
+    arl_subcarrier_proj_num_layers: 2
+    arl_subcarrier_proj_output_activation_name: tanh
+    arl_temporal_proj_arl_operation: multiply
+    arl_temporal_proj_hidden_dim: 512
+    arl_temporal_proj_is_arl: false
+    arl_temporal_proj_num_layers: 4
+    arl_temporal_proj_output_activation_name: none
+    denoiser_activation: relu
+    denoiser_filter_size_1d: 3
+    denoiser_filter_size_2d: 3
+    denoiser_is_post_processor: false
+    denoiser_is_residual: true
+    denoiser_num_filters_2d: 3
+    dim_data: 600
+    dim_model: 768
+    embedding_ca_ratio: 2
+    embedding_dropout: 0.1
+    embedding_embed: timeF
+    embedding_freq: h
+    embedding_num_res_layers: 4
+    embedding_res_dim: 64
+    embedding_res_groups: 4
+    hist_len: 16
+    pred_len: 4
+    predictor_lstm_bidirectional: false
+    predictor_lstm_dropout: 0.1
+    predictor_lstm_hidden_dim: 512
+    predictor_lstm_num_layers: 2
+    transformer_dropout_prob: 0.1
+    transformer_hidden_dim: 512
+    transformer_num_heads: 8
+    transformer_num_layers: 6
+model_name: ABL_LSTM_REPLACE_PRED
+optimizer:
+  name: Adam
+  params:
+    betas:
+    - 0.9
+    - 0.999
+    eps: 1.0e-08
+    lr: 0.0005
+    weight_decay: 0.0001
+output_dir: z_artifacts/outputs/TDD/ABL_LSTM_REPLACE_PRED
+precision: '32'
+prefix: TDD
+scheduler:
+  name: ReduceLROnPlateau
+  params:
+    cooldown: 5
+    factor: 0.1
+    min_lr: 1.0e-06
+    mode: min
+    patience: 10
+    threshold: 0.0001
+seed: 42
+training:
+  accumulate_grad_batches: 1
+  check_val_every_n_epoch: 1
+  early_stopping: true
+  early_stopping_min_delta: 0.0001
+  early_stopping_mode: min
+  early_stopping_patience: 20
+  enable_model_summary: true
+  enable_progress_bar: true
+  gradient_clip_val: null
+  log_every_n_steps: 50
+  monitor_metric: val_loss
+  monitor_mode: min
+  num_epochs: 500
+  save_top_k: 1

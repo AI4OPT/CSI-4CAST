@@ -1,0 +1,41 @@
+base_config_path: src/cp/models/ablation/arl/no_arl_fdd/config.yaml
+study_name: ablation_arl_no_arl_fdd
+direction: minimize
+is_U2D: true
+
+target_models: ["ABL_NO_ARL"]
+tune_space_file: src.cp.models.ablation.arl.no_arl_fdd.tune_space
+
+n_trials: 50
+n_jobs: 1
+timeout: null
+
+tune_model_params: true
+tune_optimizer_params: true
+tune_scheduler_params: true
+tune_training_params: true
+tune_loss_params: false
+tune_data_params: false
+tune_train_ratio: false
+
+trial_max_epochs: 25
+trial_min_epochs: 3
+trial_early_stopping: true
+trial_patience: 3
+trial_min_delta: 0.0001
+max_trial_time: 36000
+
+enable_pruning: true
+pruning_warmup_trials: 3
+pruning_warmup_steps: 2
+pruning_interval_steps: 1
+sampler_n_startup_trials: 5
+
+output_dir: z_artifacts/outputs/ahpt/ablation/arl/no_arl_fdd
+save_best_configs: true
+save_study_history: true
+verbose: true
+seed: 42
+
+start_from_checkpoint: false
+checkpoint_path: null
