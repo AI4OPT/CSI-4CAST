@@ -18,4 +18,4 @@ DIR_OUTPUTS = DIR_STORAGE + "/outputs"
 DIR_WEIGHTS = DIR_STORAGE + "/weights"
 
 # Directory for storing Hugging Face transformers models
-DIR_HUGGINGFACE_TRANSFORMERS = "/storage/home/hcoda1/1/scheng326/CSI-4CAST/z_artifacts/.hf/transformers"
+DIR_HUGGINGFACE_TRANSFORMERS = DIR_STORAGE + "/.hf/transformers"

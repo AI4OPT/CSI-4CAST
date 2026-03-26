@@ -41,6 +41,7 @@ class FreqOnlyARL(nn.Module):
         subcarrier_proj_output_activation_name="tanh",
         subcarrier_proj_arl_operation="multiply",
     ):
+        """Initialize frequency-only ARL without IDFT."""
         super().__init__()
         self.is_U2D = is_U2D
 
@@ -65,6 +66,7 @@ class FreqOnlyARL(nn.Module):
             )
 
     def forward(self, x):
+        """Process input through frequency-only ARL."""
         x = x.permute(0, 2, 1)
         x = self.temporal_proj_freq(x)
         x = x.permute(0, 2, 1)
@@ -89,6 +91,7 @@ class FreqOnlyEmbedding(nn.Module):
         freq: str = "h",
         dropout: float = 0.1,
     ):
+        """Initialize frequency-only ShuffleNet embedding."""
         super().__init__()
 
         layers: list[nn.Module] = [nn.Conv2d(2, res_dim, 3, 1, 1)]
@@ -101,6 +104,7 @@ class FreqOnlyEmbedding(nn.Module):
         self.predict_linear_pre = nn.Linear(hist_len, hist_len)
 
     def forward(self, x_freq):
+        """Embed frequency input through the ShuffleNet branch."""
         x_freq = rearrange(x_freq, "b l (k o) -> b o l k", o=2)
         x_freq = self.RB_freq(x_freq)
         x = rearrange(x_freq, "b o l k -> b l (k o)", o=2)
@@ -110,6 +114,8 @@ class FreqOnlyEmbedding(nn.Module):
 
 
 class Model(AblationTDDModel):
+    """TDD ablation model without IDFT."""
+
     def _build_arl(self) -> nn.Module:
         return FreqOnlyARL(**self._arl_kwargs())
 
@@ -129,6 +135,7 @@ class Model(AblationTDDModel):
         )
 
     def forward(self, x):
+        """Run the no-IDFT prediction pipeline."""
         x = self.denoiser(x)
         x, mean, std = batch_normalizer(x)
         x = self.arl(x)
@@ -140,5 +147,7 @@ class Model(AblationTDDModel):
 
 
 class NO_IDFT_TDD(AblationLightningModel):
+    """Ablation: TDD model without IDFT."""
+
     model_class = Model
     model_display_name = "NO_IDFT"

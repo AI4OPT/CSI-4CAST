@@ -1,10 +1,40 @@
+[project]
+name = "csi-4cast"
+version = "1.0.0"
+description = "CSI-4CAST: A Hybrid Deep Learning Model for CSI Prediction with Comprehensive Robustness and Generalization Testing"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.12"
+authors = [
+    {name = "Sikai Cheng"},
+    {name = "Reza Zandehshahvar"},
+    {name = "Haoruo Zhao"},
+    {name = "Daniel A. Garcia-Ulloa"},
+    {name = "Alejandro Villena-Rodriguez"},
+    {name = "Carles Navarro Manchón"},
+    {name = "Pascal Van Hentenryck"},
+]
+keywords = ["csi", "channel-prediction", "deep-learning", "5g", "3gpp"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+[project.urls]
+Homepage = "https://github.com/AI4OPT/CSI-4CAST"
+Paper = "https://arxiv.org/abs/2510.12996"
+Datasets = "https://huggingface.co/CSI-4CAST"
+
 [tool.ruff]
 line-length = 120
 target-version = "py312"
 fix = true
-src = ["src"]
+src = ["src", "ahpt"]
 
-include = ["src/**/*.py"]
+include = ["src/**/*.py", "ahpt/**/*.py"]
 exclude = [".git", ".venv", "venv", ".mypy_cache", ".ruff_cache",
            "build", "dist", "data", "outputs", "assets", ".ipynb_checkpoints"]
 
@@ -22,12 +52,12 @@ unfixable = ["F401"]
 ignore-init-module-imports = true
 
 [tool.ruff.lint.isort]
-known-first-party = ["src"]
+known-first-party = ["src", "ahpt"]
 combine-as-imports = true
 force-sort-within-sections = true
 lines-after-imports = 2
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/**/*.py" = ["D"]
-"src/**/*.py" = ["D"]
-"src/**/__init__.py" = ["F401"]
+"src/**/__init__.py" = ["D104", "F401"]
+"ahpt/**/__init__.py" = ["D104", "F401"]

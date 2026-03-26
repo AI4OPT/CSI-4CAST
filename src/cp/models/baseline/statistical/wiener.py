@@ -30,6 +30,7 @@ class WIENERMODEL(nn.Module):
         *args,
         **kwargs,
     ):
+        """Initialize the Wiener predictor with filter parameters."""
         super().__init__()
         self.name = "WIENER"
         self.is_separate_antennas = False
@@ -48,6 +49,7 @@ class WIENERMODEL(nn.Module):
             self.load_parameters(param_path)
 
     def __str__(self) -> str:
+        """Return the model name."""
         return self.name
 
     @property

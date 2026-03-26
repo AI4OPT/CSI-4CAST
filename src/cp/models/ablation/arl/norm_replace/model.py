@@ -11,6 +11,7 @@ class NormReplaceARL(nn.Module):
     """Apply temporal LayerNorm to delay/frequency branches after data shaping."""
 
     def __init__(self, hist_len: int):
+        """Initialize LayerNorm replacements for temporal projections."""
         super().__init__()
         # Match original ARL temporal projection normalization axis:
         # normalize over L on tensors shaped [B, D, L].
@@ -26,6 +27,7 @@ class NormReplaceARL(nn.Module):
         return x.permute(0, 2, 1)
 
     def forward(self, x):
+        """Apply LayerNorm to delay and frequency branches."""
         # Input from AblationTDDModel ARL stage:
         # x: [B, L, D], where D = 2*K and K is number of complex subcarriers.
         x_complex = real_flat_to_complex(x)
@@ -48,10 +50,14 @@ class NormReplaceARL(nn.Module):
 
 
 class Model(AblationTDDModel):
+    """TDD ablation model with LayerNorm replacing ARL."""
+
     def _build_arl(self) -> nn.Module:
         return NormReplaceARL(hist_len=self.hist_len)
 
 
 class NORM_REPLACE_ARL_TDD(AblationLightningModel):
+    """Ablation: TDD model with norm-replaced ARL."""
+
     model_class = Model
     model_display_name = "NORM_REPLACE_ARL"

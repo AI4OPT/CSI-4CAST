@@ -1,6 +1,9 @@
-"""
-based on the model1.py
-- based on the profiling results, try to speed up the model
+"""Proposed TDD CSI prediction model.
+
+This module implements the full TDD variant of the proposed CSI
+predictor. The architecture combines denoising, adaptive reweighting in
+frequency and delay domains, shuffle-style embedding blocks, a
+transformer encoder, and a final MLP projection head.
 """
 
 from einops import rearrange
@@ -17,15 +20,9 @@ from src.utils.data_utils import HIST_LEN, NUM_SUBCARRIERS, PRED_LEN
 from src.utils.real_n_complex import complex_to_real_flat, real_flat_to_complex
 
 
-"""
-▗▄▄▄ ▗▄▄▄▖▗▖  ▗▖ ▗▄▖ ▗▄▄▄▖ ▗▄▄▖▗▄▄▄▖▗▄▄▖ 
-▐▌  █▐▌   ▐▛▚▖▐▌▐▌ ▐▌  █  ▐▌   ▐▌   ▐▌ ▐▌
-▐▌  █▐▛▀▀▘▐▌ ▝▜▌▐▌ ▐▌  █   ▝▀▚▖▐▛▀▀▘▐▛▀▚▖
-▐▙▄▄▀▐▙▄▄▖▐▌  ▐▌▝▚▄▞▘▗▄█▄▖▗▄▄▞▘▐▙▄▄▖▐▌ ▐▌
-"""
-
-
 class Denoiser(nn.Module):
+    """Convolutional denoiser used at the input of the proposed model."""
+
     def __init__(
         self,
         num_filters_2d: int = 3,
@@ -37,6 +34,19 @@ class Denoiser(nn.Module):
         *args,
         **kwargs,
     ):
+        """Initialize the denoiser stack.
+
+        Args:
+            num_filters_2d: Number of convolution stages in the encoder.
+            filter_size_2d: Kernel size for 2D convolutions.
+            filter_size_1d: Kernel size for the optional 1D post-processor.
+            activation: Activation name used after convolution blocks.
+            is_post_processor: Whether to use the final 1D refinement layer.
+            is_residual: Whether to interpret the denoiser output as residual noise.
+            *args: Variable positional arguments.
+            **kwargs: Variable keyword arguments.
+
+        """
         super().__init__()
 
         self.num_filters_2d = num_filters_2d
@@ -93,6 +103,15 @@ class Denoiser(nn.Module):
         self.activation_fn = get_activation(activation)
 
     def forward(self, x):
+        """Denoise the input CSI sequence.
+
+        Args:
+            x: Input CSI tensor with shape ``[batch, hist_len, dim_data]``.
+
+        Returns:
+            Denoised CSI tensor with the same shape as the input.
+
+        """
         x_noisy = x
         x = rearrange(x, "b l (s i) -> b i l s", i=2)  # [512, 2, 16, 48]
         # Encoder
@@ -117,16 +136,9 @@ class Denoiser(nn.Module):
 
         return x_clean
 
-
-"""
- ▗▄▖ ▗▄▄▖ ▗▖   ▗▄▄▖ ▗▄▄▖  ▗▄▖  ▗▄▄▖▗▄▄▄▖ ▗▄▄▖ ▗▄▄▖ ▗▄▖ ▗▄▄▖ 
-▐▌ ▐▌▐▌ ▐▌▐▌   ▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌▐▌   ▐▌   ▐▌   ▐▌   ▐▌ ▐▌▐▌ ▐▌
-▐▛▀▜▌▐▛▀▚▖▐▌   ▐▛▀▘ ▐▛▀▚▖▐▌ ▐▌▐▌   ▐▛▀▀▘ ▝▀▚▖ ▝▀▚▖▐▌ ▐▌▐▛▀▚▖
-▐▌ ▐▌▐▌ ▐▌▐▙▄▄▖▐▌   ▐▌ ▐▌▝▚▄▞▘▝▚▄▄▖▐▙▄▄▖▗▄▄▞▘▗▄▄▞▘▝▚▄▞▘▐▌ ▐▌                                                    
-"""
-
-
 class AdaptiveReweightingLayer(nn.Module):
+    """Adaptive reweighting layer used for ARL-style feature modulation."""
+
     def __init__(
         self,
         in_dim: int,
@@ -137,6 +149,18 @@ class AdaptiveReweightingLayer(nn.Module):
         output_activation_name: str = "relu",
         arl_operation: str = "multiply",  # Options: "multiply" or "add"
     ):
+        """Initialize the adaptive reweighting layer.
+
+        Args:
+            in_dim: Input feature dimension.
+            out_dim: Output feature dimension.
+            num_layers: Number of MLP layers.
+            hidden_dim: Hidden dimension used by the MLP.
+            is_arl: Whether to apply adaptive reweighting to the input.
+            output_activation_name: Activation used at the MLP output.
+            arl_operation: Reweighting mode, either ``"multiply"`` or ``"add"``.
+
+        """
         super().__init__()
 
         self.in_dim = in_dim
@@ -164,6 +188,15 @@ class AdaptiveReweightingLayer(nn.Module):
         self.dropout = nn.Dropout(p=0.1)
 
     def forward(self, x):
+        """Apply adaptive reweighting to the input tensor.
+
+        Args:
+            x: Input tensor to transform or reweight.
+
+        Returns:
+            Reweighted tensor after normalization and dropout.
+
+        """
         out = self.mlp(x)
         if self.is_arl:
             if self.arl_operation == "multiply":
@@ -184,6 +217,8 @@ class AdaptiveReweightingLayer(nn.Module):
 
 
 class AdaptiveReweightingLayerProcessor(nn.Module):
+    """Process CSI inputs in frequency and delay domains with ARL blocks."""
+
     def __init__(
         self,
         # data
@@ -204,6 +239,24 @@ class AdaptiveReweightingLayerProcessor(nn.Module):
         subcarrier_proj_output_activation_name: str = "relu",
         subcarrier_proj_arl_operation: str = "add",
     ):
+        """Initialize the ARL processor.
+
+        Args:
+            hist_len: Number of historical time steps.
+            dim_data: Real-valued CSI feature dimension.
+            is_U2D: Whether the model is configured for U2D/FDD processing.
+            temporal_proj_num_layers: Layer count for temporal ARL blocks.
+            temporal_proj_hidden_dim: Hidden dimension for temporal ARL blocks.
+            temporal_proj_is_arl: Whether temporal projections use ARL mode.
+            temporal_proj_output_activation_name: Output activation for temporal blocks.
+            temporal_proj_arl_operation: ARL operation for temporal blocks.
+            subcarrier_proj_num_layers: Layer count for subcarrier ARL blocks.
+            subcarrier_proj_hidden_dim: Hidden dimension for subcarrier ARL blocks.
+            subcarrier_proj_is_arl: Whether subcarrier projections use ARL mode.
+            subcarrier_proj_output_activation_name: Output activation for subcarrier blocks.
+            subcarrier_proj_arl_operation: ARL operation for subcarrier blocks.
+
+        """
         super().__init__()
 
         # data
@@ -270,6 +323,15 @@ class AdaptiveReweightingLayerProcessor(nn.Module):
             )
 
     def forward(self, x):
+        """Produce delay-domain and frequency-domain feature streams.
+
+        Args:
+            x: Input CSI tensor with shape ``[batch, hist_len, dim_data]``.
+
+        Returns:
+            Tuple of ``(x_delay, x_freq)`` feature tensors.
+
+        """
         # x: [B, L, D]
         # D = 2 * K = 2 * NUM_SUBCARRIERS
 
@@ -291,17 +353,17 @@ class AdaptiveReweightingLayerProcessor(nn.Module):
 
         return x_delay, x_freq
 
-
-"""
- ▗▄▄▖▗▖ ▗▖▗▖ ▗▖▗▄▄▄▖▗▄▄▄▖▗▖   ▗▄▄▄▖▗▄▄▖ ▗▖    ▗▄▖  ▗▄▄▖▗▖ ▗▖ ▗▄▄▖
-▐▌   ▐▌ ▐▌▐▌ ▐▌▐▌   ▐▌   ▐▌   ▐▌   ▐▌ ▐▌▐▌   ▐▌ ▐▌▐▌   ▐▌▗▞▘▐▌   
- ▝▀▚▖▐▛▀▜▌▐▌ ▐▌▐▛▀▀▘▐▛▀▀▘▐▌   ▐▛▀▀▘▐▛▀▚▖▐▌   ▐▌ ▐▌▐▌   ▐▛▚▖  ▝▀▚▖
-▗▄▄▞▘▐▌ ▐▌▝▚▄▞▘▐▌   ▐▌   ▐▙▄▄▖▐▙▄▄▖▐▙▄▞▘▐▙▄▄▖▝▚▄▞▘▝▚▄▄▖▐▌ ▐▌▗▄▄▞▘
-"""
-
-
 class ChannelAttention(nn.Module):
+    """Channel-attention block for 2D feature maps."""
+
     def __init__(self, in_planes: int, ratio: int = 4):
+        """Initialize the channel-attention module.
+
+        Args:
+            in_planes: Number of input channels.
+            ratio: Reduction ratio inside the attention bottleneck.
+
+        """
         super().__init__()
 
         avg_pool = nn.AdaptiveAvgPool2d(1)
@@ -313,18 +375,29 @@ class ChannelAttention(nn.Module):
         self.se = nn.Sequential(avg_pool, fc1, relu1, fc2, sigmoid)
 
     def forward(self, x):
+        """Compute channel attention weights for the input feature map."""
         # x has shape B, C, H, W
         # self.avg_pool(x) has shape B, C, 1, 1
         return self.se(x)
 
 
 class ShuffleBlockCA(nn.Module):
+    """Shuffle-style residual block with channel attention."""
+
     def __init__(
         self,
         in_channels=64,
         groups=4,
         ca_ratio: int = 1,
     ):
+        """Initialize the shuffle residual block.
+
+        Args:
+            in_channels: Number of block channels.
+            groups: Number of groups used in grouped pointwise convolutions.
+            ca_ratio: Reduction ratio used inside channel attention.
+
+        """
         super().__init__()
 
         self.in_channels = in_channels
@@ -370,6 +443,7 @@ class ShuffleBlockCA(nn.Module):
         self.ca_relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
+        """Apply grouped convolutions, channel shuffle, and residual attention."""
         rs = self.g_pw_conv_in(x)
         rs = self.g_pw_conv_in_bn(rs)
         rs = self.g_pw_conv_in_relu(rs)
@@ -390,6 +464,7 @@ class ShuffleBlockCA(nn.Module):
         return out
 
     def channel_shuffle(self, x):
+        """Shuffle channel groups to mix grouped-convolution outputs."""
         B, C, H, W = x.size()
         assert C % self.groups == 0, "C must be divisible by groups"
         group_channels = C // self.groups
@@ -400,6 +475,8 @@ class ShuffleBlockCA(nn.Module):
 
 
 class CSIEmbeddingShuffleNet(nn.Module):
+    """Embed CSI features with delay/frequency residual blocks and token embeddings."""
+
     def __init__(
         self,
         dim_model: int,
@@ -413,6 +490,21 @@ class CSIEmbeddingShuffleNet(nn.Module):
         freq: str = "h",
         dropout: float = 0.1,
     ):
+        """Initialize the embedding network.
+
+        Args:
+            dim_model: Embedding dimension produced for the transformer.
+            num_res_layers: Number of residual shuffle blocks per branch.
+            res_dim: Channel width used inside the residual blocks.
+            res_groups: Number of groups for grouped convolutions.
+            res_ca_ratio: Reduction ratio used inside channel attention.
+            hist_len: Number of historical input steps.
+            dim_data: Real-valued CSI feature dimension.
+            embed: Embedding mode for temporal features.
+            freq: Time-feature frequency code.
+            dropout: Dropout probability applied in the embedding layer.
+
+        """
         super().__init__()
 
         self.num_res_layers = num_res_layers
@@ -443,6 +535,16 @@ class CSIEmbeddingShuffleNet(nn.Module):
         self.predict_linear_pre = nn.Linear(hist_len, hist_len)
 
     def forward(self, x_delay, x_freq):
+        """Embed delay-domain and frequency-domain features.
+
+        Args:
+            x_delay: Delay-domain CSI features.
+            x_freq: Frequency-domain CSI features.
+
+        Returns:
+            Embedded sequence ready for transformer processing.
+
+        """
         # process in delay domain
         x_delay = rearrange(x_delay, "b l (k o) -> b o l k", o=2)  # [B, 2, L, D/2] (512, 2, 16, 48)
         x_delay = self.RB_delay(x_delay)  # [B, 2, L, D/2] (512, 2, 16, 48)
@@ -458,16 +560,9 @@ class CSIEmbeddingShuffleNet(nn.Module):
 
         return x
 
-
-"""
-▗▄▄▄▖▗▄▄▖  ▗▄▖ ▗▖  ▗▖ ▗▄▄▖▗▄▄▄▖ ▗▄▖ ▗▄▄▖ ▗▖  ▗▖▗▄▄▄▖▗▄▄▖ 
-  █  ▐▌ ▐▌▐▌ ▐▌▐▛▚▖▐▌▐▌   ▐▌   ▐▌ ▐▌▐▌ ▐▌▐▛▚▞▜▌▐▌   ▐▌ ▐▌
-  █  ▐▛▀▚▖▐▛▀▜▌▐▌ ▝▜▌ ▝▀▚▖▐▛▀▀▘▐▌ ▐▌▐▛▀▚▖▐▌  ▐▌▐▛▀▀▘▐▛▀▚▖
-  █  ▐▌ ▐▌▐▌ ▐▌▐▌  ▐▌▗▄▄▞▘▐▌   ▝▚▄▞▘▐▌ ▐▌▐▌  ▐▌▐▙▄▄▖▐▌ ▐▌
-"""
-
-
 class TransformerPredictor(nn.Module):
+    """Transformer encoder used as the sequence predictor."""
+
     def __init__(
         self,
         dim_model: int,
@@ -476,6 +571,16 @@ class TransformerPredictor(nn.Module):
         hidden_dim: int = 1024,
         dropout_prob: float = 0.1,
     ):
+        """Initialize the transformer predictor.
+
+        Args:
+            dim_model: Input and output embedding dimension.
+            num_layers: Number of transformer encoder layers.
+            num_heads: Number of attention heads.
+            hidden_dim: Feed-forward dimension inside each encoder layer.
+            dropout_prob: Dropout probability used by the encoder.
+
+        """
         super().__init__()
 
         self.dim_model = dim_model
@@ -498,19 +603,13 @@ class TransformerPredictor(nn.Module):
         )
 
     def forward(self, x):
+        """Run the transformer encoder over the embedded sequence."""
         x = self.transformer(x)
         return x
 
-
-"""
-▗▖  ▗▖▗▖   ▗▄▄▖ ▗▄▄▖ ▗▄▄▖  ▗▄▖  ▗▄▄▖▗▄▄▄▖ ▗▄▄▖ ▗▄▄▖ ▗▄▖ ▗▄▄▖ 
-▐▛▚▞▜▌▐▌   ▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌▐▌ ▐▌▐▌   ▐▌   ▐▌   ▐▌   ▐▌ ▐▌▐▌ ▐▌
-▐▌  ▐▌▐▌   ▐▛▀▘ ▐▛▀▘ ▐▛▀▚▖▐▌ ▐▌▐▌   ▐▛▀▀▘ ▝▀▚▖ ▝▀▚▖▐▌ ▐▌▐▛▀▚▖
-▐▌  ▐▌▐▙▄▄▖▐▌   ▐▌   ▐▌ ▐▌▝▚▄▞▘▝▚▄▄▖▐▙▄▄▖▗▄▄▞▘▗▄▄▞▘▝▚▄▞▘▐▌ ▐▌
-"""
-
-
 class MLPProcessor(nn.Module):
+    """Project transformer outputs back to CSI prediction space."""
+
     def __init__(
         self,
         dim_model: int,
@@ -518,6 +617,15 @@ class MLPProcessor(nn.Module):
         hist_len: int,
         pred_len: int,
     ):
+        """Initialize the output projection head.
+
+        Args:
+            dim_model: Transformer embedding dimension.
+            dim_data: Real-valued CSI feature dimension.
+            hist_len: Number of historical input steps.
+            pred_len: Number of future steps to predict.
+
+        """
         super().__init__()
 
         self.dim_model = dim_model
@@ -527,22 +635,16 @@ class MLPProcessor(nn.Module):
         self.hist_to_pred = nn.Linear(hist_len, pred_len)
 
     def forward(self, x):
+        """Project sequence embeddings to the prediction horizon."""
         x = self.pred_to_data(x)  # [batch_size, hist_len, dim_model] -> [batch_size, hist_len, dim_data]
         x = self.hist_to_pred(x.permute(0, 2, 1)).permute(
             0, 2, 1
         )  # [batch_size, hist_len, dim_data] -> [batch_size, pred_len, dim_data]
         return x
 
-
-"""
-▗▖  ▗▖ ▗▄▖ ▗▄▄▄ ▗▄▄▄▖▗▖   
-▐▛▚▞▜▌▐▌ ▐▌▐▌  █▐▌   ▐▌   
-▐▌  ▐▌▐▌ ▐▌▐▌  █▐▛▀▀▘▐▌   
-▐▌  ▐▌▝▚▄▞▘▐▙▄▄▀▐▙▄▄▖▐▙▄▄▖
-"""
-
-
 class Model(nn.Module):
+    """Compose the full proposed CSI predictor."""
+
     def __init__(
         self,
         # data
@@ -583,6 +685,43 @@ class Model(nn.Module):
         transformer_hidden_dim: int = 1024,
         transformer_dropout_prob: float = 0.1,
     ):
+        """Initialize the full proposed model pipeline.
+
+        Args:
+            hist_len: Number of historical input steps.
+            pred_len: Number of future steps to predict.
+            dim_data: Real-valued CSI feature dimension.
+            dim_model: Internal embedding dimension.
+            denoiser_num_filters_2d: Number of denoiser convolution stages.
+            denoiser_filter_size_2d: Kernel size for denoiser 2D convolutions.
+            denoiser_filter_size_1d: Kernel size for denoiser 1D post-processing.
+            denoiser_activation: Activation used inside the denoiser.
+            denoiser_is_post_processor: Whether to enable denoiser post-processing.
+            denoiser_is_residual: Whether the denoiser predicts residual noise.
+            arl_is_U2D: Whether ARL uses the U2D/FDD subcarrier branches.
+            arl_temporal_proj_num_layers: Layer count for temporal ARL projections.
+            arl_temporal_proj_hidden_dim: Hidden dimension for temporal ARL projections.
+            arl_temporal_proj_is_arl: Whether temporal projections use ARL mode.
+            arl_temporal_proj_output_activation_name: Output activation for temporal ARL projections.
+            arl_temporal_proj_arl_operation: ARL operation for temporal projections.
+            arl_subcarrier_proj_num_layers: Layer count for subcarrier ARL projections.
+            arl_subcarrier_proj_hidden_dim: Hidden dimension for subcarrier ARL projections.
+            arl_subcarrier_proj_is_arl: Whether subcarrier projections use ARL mode.
+            arl_subcarrier_proj_output_activation_name: Output activation for subcarrier projections.
+            arl_subcarrier_proj_arl_operation: ARL operation for subcarrier projections.
+            embedding_num_res_layers: Number of residual embedding blocks.
+            embedding_res_dim: Channel width in the embedding blocks.
+            embedding_res_groups: Number of groups in grouped convolutions.
+            embedding_ca_ratio: Reduction ratio used in embedding channel attention.
+            embedding_embed: Embedding mode for temporal features.
+            embedding_freq: Time-feature frequency code.
+            embedding_dropout: Dropout probability in the embedding layer.
+            transformer_num_layers: Number of transformer encoder layers.
+            transformer_num_heads: Number of transformer attention heads.
+            transformer_hidden_dim: Feed-forward dimension in the transformer.
+            transformer_dropout_prob: Dropout probability in the transformer.
+
+        """
         super().__init__()
 
         self.hist_len = hist_len
@@ -649,6 +788,15 @@ class Model(nn.Module):
         )
 
     def forward(self, x):
+        """Run the full CSI prediction pipeline.
+
+        Args:
+            x: Input CSI tensor with shape ``[batch, hist_len, dim_data]``.
+
+        Returns:
+            Predicted CSI tensor with shape ``[batch, pred_len, dim_data]``.
+
+        """
         x = self.denoiser(x)
         x, mean, std = batch_normalizer(x)
         x_delay, x_freq = self.arl(x)
@@ -660,9 +808,18 @@ class Model(nn.Module):
 
 
 class MODEL_TDD(BaseCSIModel):
-    """Complete model for CSI prediction."""
+    """Lightning wrapper for the proposed TDD CSI predictor."""
 
     def __init__(self, config: ExperimentConfig, *args, **kwargs):
+        """Build the Lightning wrapper from an experiment config.
+
+        Args:
+            config: Experiment configuration containing model, optimizer,
+                scheduler, and loss settings.
+            *args: Passed to the parent class.
+            **kwargs: Passed to the parent class.
+
+        """
         super().__init__(
             optimizer_config=config.optimizer,
             scheduler_config=config.scheduler,
@@ -676,7 +833,9 @@ class MODEL_TDD(BaseCSIModel):
         self.model = Model(**config.model.params)
 
     def __str__(self):
+        """Return the model name used in logs and registries."""
         return self.name
 
     def forward(self, x):
+        """Delegate the forward pass to the wrapped predictor."""
         return self.model(x)

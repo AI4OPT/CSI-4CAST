@@ -1,3 +1,10 @@
+"""STEMGNN baseline models for CSI prediction.
+
+This module contains the graph-based STEMGNN predictor adapted to CSI
+forecasting, together with smaller internal blocks and the Lightning
+wrapper used by the training pipeline.
+"""
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -8,17 +15,47 @@ from src.utils.data_utils import HIST_LEN, NUM_SUBCARRIERS, PRED_LEN
 
 
 class GLU(nn.Module):
+    """Gated linear unit used inside STEMGNN blocks.
+
+    The block applies two linear projections and uses one to gate the
+    other, providing a compact nonlinear transformation.
+    """
+
     def __init__(self, input_channel, output_channel):
+        """Initialize the gated linear unit.
+
+        Args:
+            input_channel: Input feature dimension.
+            output_channel: Output feature dimension.
+
+        """
         super().__init__()
         self.linear_left = nn.Linear(input_channel, output_channel)
         self.linear_right = nn.Linear(input_channel, output_channel)
 
     def forward(self, x):
+        """Apply gated linear mixing."""
         return torch.mul(self.linear_left(x), torch.sigmoid(self.linear_right(x)))
 
 
 class StockBlockLayer(nn.Module):
+    """Core spectral-temporal block used by STEMGNN.
+
+    The block mixes graph spectral filtering with temporal forecasting
+    and optional backcasting. It is the main repeated unit inside the
+    predictor.
+    """
+
     def __init__(self, time_step, unit, multi_layer, stack_cnt=0):
+        """Initialize one spectral-temporal forecasting block.
+
+        Args:
+            time_step: Number of input time steps.
+            unit: Feature dimension processed by the block.
+            multi_layer: Multiplicative expansion factor in the spectral path.
+            stack_cnt: Index of the block within the stacked architecture.
+
+        """
         super().__init__()
         self.time_step = time_step
         self.unit = unit
@@ -48,6 +85,7 @@ class StockBlockLayer(nn.Module):
                 self.GLUs.append(GLU(self.time_step * self.output_channel, self.time_step * self.output_channel))
 
     def spe_seq_cell(self, input):
+        """Apply the spectral sequence cell."""
         batch_size, k, input_channel, node_cnt, time_step = input.size()
         input = input.view(batch_size, -1, node_cnt, time_step)
         ffted = torch.view_as_real(torch.fft.fft(input, dim=1))
@@ -63,6 +101,7 @@ class StockBlockLayer(nn.Module):
         return iffted
 
     def forward(self, x, mul_L):
+        """Run one STEMGNN block."""
         mul_L = mul_L.unsqueeze(1)
         x = x.unsqueeze(1)
         gfted = torch.matmul(mul_L, x)
@@ -80,6 +119,13 @@ class StockBlockLayer(nn.Module):
 
 
 class STEMGNN_Predictor(nn.Module):
+    """STEMGNN predictor adapted to CSI sequence forecasting.
+
+    The model learns a latent graph over features, computes graph
+    spectral filters, and uses stacked forecasting blocks to predict
+    future CSI steps from historical inputs.
+    """
+
     def __init__(
         self,
         embedded_dim: int = NUM_SUBCARRIERS * 2,
@@ -90,6 +136,18 @@ class STEMGNN_Predictor(nn.Module):
         dropout_rate: float = 0.5,
         leaky_rate: float = 0.2,
     ):
+        """Initialize the CSI-oriented STEMGNN predictor.
+
+        Args:
+            embedded_dim: Input feature dimension.
+            window_size: Number of historical input steps.
+            horizon: Number of future steps to predict.
+            n_stacks: Number of stacked forecasting blocks.
+            multi_layer: Expansion factor used inside each block.
+            dropout_rate: Dropout probability used in graph attention.
+            leaky_rate: Negative slope for the leaky ReLU activations.
+
+        """
         super().__init__()
 
         self.embedded_dim = embedded_dim
@@ -121,7 +179,8 @@ class STEMGNN_Predictor(nn.Module):
         self.dropout = nn.Dropout(p=dropout_rate)
 
     def get_laplacian(self, graph, normalize):
-        """Return the laplacian of the graph.
+        """Return the graph Laplacian.
+
         :param graph: the graph structure without self loop, [N, N].
         :param normalize: whether to used the normalized laplacian.
         :return: graph laplacian.
@@ -135,7 +194,8 @@ class STEMGNN_Predictor(nn.Module):
         return L
 
     def cheb_polynomial(self, laplacian):
-        """Compute the Chebyshev Polynomial, according to the graph laplacian.
+        """Compute the Chebyshev polynomial basis for a graph Laplacian.
+
         :param laplacian: the graph laplacian, [N, N].
         :return: the multi order Chebyshev laplacian, [K, N, N].
         """
@@ -149,6 +209,7 @@ class STEMGNN_Predictor(nn.Module):
         return multi_order_laplacian
 
     def latent_correlation_layer(self, x):
+        """Infer the latent graph structure from the input sequence."""
         # x has shape [batch_size, hist_len, num_subcarriers*2] real
         # x.permute(2, 0, 1).contiguous() has shape [num_subcarriers*2, batch_size, hist_len] real
         # self.GRU has input size self.time_step = 16 and hidden size self.unit = 600
@@ -166,6 +227,7 @@ class STEMGNN_Predictor(nn.Module):
         return mul_L, attention
 
     def self_graph_attention(self, input):
+        """Compute self-attention over graph nodes."""
         input = input.permute(0, 2, 1).contiguous()
         bat, N, fea = input.size()
         key = torch.matmul(input, self.weight_key)
@@ -179,9 +241,11 @@ class STEMGNN_Predictor(nn.Module):
         return attention
 
     def graph_fft(self, input, eigenvectors):
+        """Project a signal into the graph spectral domain."""
         return torch.matmul(eigenvectors, input)
 
     def forward(self, x):
+        """Forecast the next CSI steps."""
         mul_L, attention = self.latent_correlation_layer(x)
         X = x.unsqueeze(1).permute(0, 1, 3, 2).contiguous()  # [batch_size, 1, num_subcarriers, hist_len]
         result = []
@@ -196,9 +260,22 @@ class STEMGNN_Predictor(nn.Module):
 
 
 class STEMGNN_pl(BaseCSIModel):
-    """ST-Net and STEMGNN Predictor"""
+    """Lightning wrapper around the STEMGNN predictor.
+
+    This wrapper attaches the predictor to the shared optimization and
+    loss configuration used by the rest of the training code.
+    """
 
     def __init__(self, config: ExperimentConfig, *args, **kwargs):
+        """Build the Lightning wrapper from an experiment config.
+
+        Args:
+            config: Experiment configuration containing model and
+                optimizer settings.
+            *args: Passed to the parent class.
+            **kwargs: Passed to the parent class.
+
+        """
         super().__init__(
             optimizer_config=config.optimizer,
             scheduler_config=config.scheduler,
@@ -212,6 +289,15 @@ class STEMGNN_pl(BaseCSIModel):
         self.predictor = STEMGNN_Predictor(**config.model.params)
 
     def forward(self, x):
+        """Delegate the forward pass to the wrapped predictor.
+
+        Args:
+            x: Input CSI tensor.
+
+        Returns:
+            Model prediction for the next CSI steps.
+
+        """
         x = self.predictor(x)
         return x
 

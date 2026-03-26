@@ -83,36 +83,41 @@ class TuningConfig:
     base_config_path: str = ""
 
     @classmethod
-    def fromDict(cls, dict_config: dict[str, Any]) -> TuningConfig:
+    def from_dict(cls, dict_config: dict[str, Any]) -> TuningConfig:
+        """Build a config from a dictionary."""
         valid_fields = {f.name for f in cls.__dataclass_fields__.values()}
         filtered = {k: v for k, v in dict_config.items() if k in valid_fields}
         return cls(**filtered)
 
     @classmethod
-    def fromYaml(cls, path_yaml: str) -> TuningConfig:
-        with open(path_yaml) as f:
+    def from_yaml(cls, path_yaml: str) -> TuningConfig:
+        """Load a config from a YAML file."""
+        with open(path_yaml, encoding="utf-8") as f:
             dict_config = yaml.safe_load(f)
-        return cls.fromDict(dict_config)
+        return cls.from_dict(dict_config)
 
     @classmethod
-    def fromJson(cls, path_json: str) -> TuningConfig:
-        with open(path_json) as f:
+    def from_json(cls, path_json: str) -> TuningConfig:
+        """Load a config from a JSON file."""
+        with open(path_json, encoding="utf-8") as f:
             dict_config = json.load(f)
-        return cls.fromDict(dict_config)
+        return cls.from_dict(dict_config)
 
-    def toDict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
+        """Serialize the config to a plain dictionary."""
         return {k: v for k, v in self.__dict__.items()}
 
-    def saveYaml(self, path_yaml: str):
+    def save_yaml(self, path_yaml: str) -> None:
+        """Write the config to a YAML file."""
         Path(path_yaml).parent.mkdir(parents=True, exist_ok=True)
-        with open(path_yaml, "w") as f:
-            yaml.dump(self.toDict(), f, default_flow_style=False, allow_unicode=True)
+        with open(path_yaml, "w", encoding="utf-8") as f:
+            yaml.dump(self.to_dict(), f, default_flow_style=False, allow_unicode=True)
 
-    def saveJson(self, path_json: str):
+    def save_json(self, path_json: str) -> None:
+        """Write the config to a JSON file."""
         Path(path_json).parent.mkdir(parents=True, exist_ok=True)
-        with open(path_json, "w") as f:
-            json.dump(self.toDict(), f, indent=4)
-
+        with open(path_json, "w", encoding="utf-8") as f:
+            json.dump(self.to_dict(), f, indent=4)
 
 @dataclass
 class StudyResult:
@@ -127,9 +132,10 @@ class StudyResult:
     study_history_path: str | None = None
     top_k_config_paths: list[str] | None = None
 
-    def save(self, output_path: str):
+    def save(self, output_path: str) -> None:
+        """Persist the study summary to JSON."""
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             json.dump(
                 {
                     "study_name": self.study_name,
@@ -147,6 +153,7 @@ class StudyResult:
 
     @classmethod
     def load(cls, path: str) -> StudyResult:
-        with open(path) as f:
+        """Load a study summary from JSON."""
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
         return cls(**data)

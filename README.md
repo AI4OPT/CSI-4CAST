@@ -1,92 +1,77 @@
 # CSI-4CAST: Channel State Information Forecasting
 
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+
 CSI-4CAST is a comprehensive framework for generating and evaluating Channel State Information (CSI) prediction models using 3GPP TR 38.901 channel models. The repository provides tools for large-scale dataset generation, model training, and comprehensive evaluation with support for both high-performance computing environments ([Phoenix HPC](https://pace.gatech.edu/phoenix-cluster/)) and direct execution on local machines.
 
-This framework is developed as part of our research paper [**CSI-4CAST: A Hybrid Deep Learning Model for CSI Prediction with Comprehensive Robustness and Generalization Testing**](https://arxiv.org/abs/2510.12996).  (A BibTeX entry for citation is provided at the end of this page.) The corresponding datasets are publicly available on our [Hugging Face Dataset](https://huggingface.co/CSI-4CAST).
+This framework is developed as part of our research paper [**CSI-4CAST: A Hybrid Deep Learning Model for CSI Prediction with Comprehensive Robustness and Generalization Testing**](https://arxiv.org/abs/2510.12996). (A BibTeX entry for citation is provided at the end of this page.) The corresponding datasets are publicly available on our [Hugging Face organization](https://huggingface.co/CSI-4CAST).
+
+## Updates
+
+> [!IMPORTANT]
+> - **Model weights are now public**: all model weights used in the experiments are available in [CSI-4CAST/weights](https://huggingface.co/CSI-4CAST/weights), including the proposed models and the baseline models.
+> - **The tuning workflow is now included**: the reusable tuning infrastructure is in [`ahpt/`](ahpt/) and the CSI prediction tuning entry points are in [`src/cp/tune/`](src/cp/tune/).
+> - **All ablation models are included**: the ablation study implementations are available under [`src/cp/models/ablation/`](src/cp/models/ablation/).
+> - **All baselines are included**: the repository now contains statistical baselines in [`src/cp/models/baseline/statistical/`](src/cp/models/baseline/statistical/) and learning-based baselines in [`src/cp/models/baseline/learning/`](src/cp/models/baseline/learning/), together with the no-prediction baseline in [`src/cp/models/baseline/np.py`](src/cp/models/baseline/np.py).
 
 ## Repository Structure
 
 ```
 CSI-4CAST/
-├── README.md                    # Project documentation
-├── LICENSE                      # License information
-├── env.yml                      # Conda environment configuration
-├── pyproject.toml              # Python project configuration and linting rules
-├── scripts/                    # SLURM job scripts and templates
-│   ├── data_gen_template.sh    # Template for data generation jobs
-│   ├── cp_template.sh         # Template for model training jobs
-│   ├── testing_template.sh    # Template for testing jobs
-│   └── outs/                  # Job output logs
-├── src/                        # Source code
-│   ├── data/                   # Data generation module
-│   │   ├── csi_simulator.py    # CSI simulation using Sionna
-│   │   └── generator.py        # Dataset generation pipeline
-│   ├── cp/                     # Channel Prediction (model training) module
-│   │   ├── main.py            # Training entry point
-│   │   ├── config/            # Training configuration management
-│   │   │   └── config.py      # Configuration file generator
-│   │   ├── dataset/           # PyTorch Lightning data modules
-│   │   │   └── data_module.py # Data loading and preprocessing
-│   │   ├── models/            # Model architectures
-│   │   │   ├── __init__.py    # Model registry (PREDICTORS class)
-│   │   │   ├── common/        # Shared model components
-│   │   │   │   └── base.py    # BaseCSIModel class
-│   │   │   └── baseline_models/ # Baseline model implementations
-│   │   │       ├── np.py      # No-prediction baseline
-│   │   │       └── rnn.py     # RNN-based predictor
-│   │   └── loss/              # Loss functions
-│   │       └── loss.py        # Custom loss implementations
-│   ├── noise/                  # Noise modeling and testing module
-│   │   ├── noise.py           # Noise generation functions
-│   │   ├── noise_degree.py    # Noise parameter calibration
-│   │   ├── noise_testing.py   # Noise testing utilities
-│   │   └── results/           # Noise calibration results
-│   │       ├── decide_nd.json # Noise degree mapping
-│   │       └── snr.csv        # SNR measurement results
-│   ├── testing/                # Model evaluation module
-│   │   ├── config.py          # Testing configuration
-│   │   ├── get_models.py      # Model loading utilities
-│   │   ├── computational_overhead/ # Performance profiling
-│   │   │   ├── main.py        # Computational overhead testing
-│   │   │   └── utils.py       # Profiling utilities
-│   │   ├── prediction_performance/ # Prediction accuracy testing
-│   │   │   ├── main.py        # Performance testing entry point
-│   │   │   └── test_unit.py   # Individual test units
-│   │   ├── results/           # Result processing and analysis
-│   │   │   ├── main.py        # Results processing pipeline
-│   │   │   ├── analysis_df.py # Statistical analysis
-│   │   │   ├── check_completion.py # Test completion verification
-│   │   │   └── gather_results.py # Result aggregation
-│   │   └── vis/               # Visualization module
-│   │       ├── main.py        # Visualization entry point
-│   │       ├── line.py        # Line plot generation
-│   │       ├── radar.py       # Radar plot generation
-│   │       ├── table.py       # Table generation
-│   │       └── violin.py      # Violin plot generation
-│   └── utils/                  # Utility functions
-│       ├── data_utils.py      # Constants and data handling utilities
-│       ├── dirs.py            # Directory path management
-│       ├── norm_utils.py      # Data normalization utilities
-│       ├── main_utils.py      # General utilities
-│       ├── model_utils.py     # Model-related utilities
-│       ├── real_n_complex.py  # Complex number handling
-│       ├── time_utils.py      # Time formatting utilities
-│       └── vis_utils.py       # Visualization utilities
-└── z_artifacts/               # Generated artifacts and outputs
-    ├── config/                # Generated configuration files
-    │   └── cp/                # Channel prediction configurations
-    ├── data/                  # Generated datasets (created during data generation)
-    ├── outputs/               # Training and testing outputs
-    │   ├── [TDD/FDD]/         # Training outputs by scenario
-    │   ├── noise/             # Noise calibration results
-    │   └── testing/           # Testing results and analysis
-    │       ├── computational_overhead/ # Performance profiling results
-    │       ├── prediction_performance/ # Accuracy testing results
-    │       ├── results/       # Processed analysis results
-    │       └── vis/           # Generated visualizations
-    └── weights/               # Trained model checkpoints
-        ├── fdd/               # FDD scenario model weights
-        └── tdd/               # TDD scenario model weights
+├── README.md                         # Project documentation
+├── LICENSE                           # License information
+├── env.yml                           # Conda environment configuration
+├── pyproject.toml                    # Project configuration and linting rules
+├── ahpt/                             # Reusable hyperparameter tuning utilities
+│   └── base/
+│       ├── config.py                 # Tuning configuration dataclasses
+│       ├── submit_jobs.py            # SLURM job submission helpers
+│       ├── tune_obj.py               # Optuna objective base classes
+│       ├── tune_runner.py            # Study orchestration utilities
+│       ├── tune_space.py             # Search-space helpers
+│       └── utils.py                  # Shared tuning utilities
+├── scripts/                          # HPC job scripts and templates
+│   ├── computational_overhead.sh
+│   ├── cp_template.sh
+│   ├── data_gen_template.sh
+│   ├── nd.sh
+│   ├── param_estimation.sh
+│   ├── resync.sh
+│   ├── testing.sh
+│   └── outs/                         # Example job logs
+├── src/                              # Source code
+│   ├── data/                         # Data generation module
+│   ├── cp/                           # Channel prediction and tuning module
+│   │   ├── main.py                   # Training entry point
+│   │   ├── config/                   # Training configuration management
+│   │   ├── dataset/                  # Data modules
+│   │   ├── loss/                     # Loss functions
+│   │   ├── tune/                     # Tuning entry points and monitoring
+│   │   │   ├── main.py
+│   │   │   ├── monitor.py
+│   │   │   ├── submit.py
+│   │   │   ├── tune_obj.py
+│   │   │   ├── tune_runner.py
+│   │   │   └── worker.py
+│   │   └── models/                   # Model registry and implementations
+│   │       ├── __init__.py
+│   │       ├── common/               # Shared model components
+│   │       ├── proposed/             # Proposed CSI-4CAST models
+│   │       ├── ablation/             # Ablation study variants
+│   │       └── baseline/             # Baseline models
+│   │           ├── np.py             # No-prediction baseline
+│   │           ├── learning/         # CNN, RNN, STEMGNN, LLM4CP
+│   │           └── statistical/      # AR, PAD, Wiener
+│   ├── noise/                        # Noise modeling and calibration
+│   ├── testing/                      # Evaluation and visualization
+│   └── utils/                        # Shared utilities
+└── z_artifacts/                      # Generated artifacts and outputs used by the codebase
+    ├── config/                       # Generated configuration files
+    ├── data/                         # Generated datasets and normalization stats
+    ├── outputs/                      # Training, tuning, noise, and testing outputs
+    └── weights/                      # Trained checkpoints organized by scenario/model
 ```
 
 ## Core Modules
@@ -130,10 +115,13 @@ The channel prediction module provides a comprehensive framework for training CS
 - **[`main.py`](src/cp/main.py)**: Training entry point that orchestrates the entire training process
 - **[`config/config.py`](src/cp/config/config.py)**: Configuration management system for training parameters, model settings, and hyperparameters
 - **[`dataset/data_module.py`](src/cp/dataset/data_module.py)**: PyTorch Lightning data modules for efficient data loading and preprocessing
+- **[`tune/`](src/cp/tune/)**: CSI prediction tuning workflow including SLURM submission, Optuna workers, and dashboard monitoring
 - **[`models/`](src/cp/models/)**: Model architectures including:
   - **[`__init__.py`](src/cp/models/__init__.py)**: PREDICTORS registry for model selection
   - **[`common/base.py`](src/cp/models/common/base.py)**: BaseCSIModel class that all models inherit from
-  - **[`baseline_models/`](src/cp/models/baseline_models/)**: Implementation of baseline models (NP, RNN)
+  - **[`proposed/`](src/cp/models/proposed/)**: Proposed CSI-4CAST models for FDD and TDD
+  - **[`ablation/`](src/cp/models/ablation/)**: Ablation models for denoiser, ARL, IDFT, embedding, and predictor studies
+  - **[`baseline/`](src/cp/models/baseline/)**: Baseline implementations including NP, AR, PAD, Wiener, CNN, RNN, STEMGNN, and LLM4CP
 - **[`loss/loss.py`](src/cp/loss/loss.py)**: Custom loss functions optimized for CSI prediction tasks
 
 ### 3. Noise Module (`src/noise`)
@@ -214,7 +202,7 @@ The model training framework is built on PyTorch Lightning and located in the [`
 
 #### Define Models
 
-Models should be defined under [`src/cp/models`](src/cp/models) folder, inherit from `BaseCSIModel` in [`src/cp/models/common/base.py`](src/cp/models/common/base.py), and be registered in the `PREDICTORS` class in [`src/cp/models/__init__.py`](src/cp/models/__init__.py). See [`src/cp/models/baseline_models/rnn.py`](src/cp/models/baseline_models/rnn.py) for an example implementation.
+Models should be defined under [`src/cp/models`](src/cp/models), inherit from `BaseCSIModel` in [`src/cp/models/common/base.py`](src/cp/models/common/base.py), and be registered in the `PREDICTORS` class in [`src/cp/models/__init__.py`](src/cp/models/__init__.py). See [`src/cp/models/baseline/learning/rnn.py`](src/cp/models/baseline/learning/rnn.py) for an example implementation.
 
 #### Configure Training
 
@@ -239,7 +227,57 @@ View training progress:
 tensorboard --logdir [output_directory]/tb_logs
 ```
 
-### 3. Noise Degree Testing
+### 3. Hyperparameter Tuning
+
+The hyperparameter tuning workflow combines the reusable tuning utilities in [`ahpt/`](ahpt/) with the CSI prediction-specific integration in [`src/cp/tune/`](src/cp/tune/). Each study is defined by a tuning YAML that points to a base training config, a search space module, and an output directory.
+
+#### Example Tuning Config
+
+Use [`src/cp/models/ablation/predictor/lstm_replace/tuning.yaml`](src/cp/models/ablation/predictor/lstm_replace/tuning.yaml) as a reference. This file defines:
+
+- the base training config in [`config.yaml`](src/cp/models/ablation/predictor/lstm_replace/config.yaml)
+- the target model `ABL_LSTM_REPLACE_PRED`
+- the search space in `src.cp.models.ablation.predictor.lstm_replace.tune_space`
+- Optuna study settings such as `n_trials`, pruning, and early stopping
+- the output directory `z_artifacts/outputs/ahpt/ablation/predictor/lstm_replace`
+
+#### Launch a Tuning Study
+
+```bash
+python3 -m src.cp.tune.main \
+    --config src/cp/models/ablation/predictor/lstm_replace/tuning.yaml \
+    --num_workers 3
+```
+
+You can also override SLURM resource settings at submission time:
+
+```bash
+python3 -m src.cp.tune.main \
+    --config src/cp/models/ablation/predictor/lstm_replace/tuning.yaml \
+    --num_workers 3 \
+    --time 08:00:00 \
+    --mem 64G
+```
+
+Each study writes its artifacts under `z_artifacts/outputs/ahpt/ablation/...`, including the Optuna database, best configs, and study history.
+
+#### Monitor Tuning Results
+
+To inspect the discovered studies without launching dashboards:
+
+```bash
+python3 -m src.cp.tune.monitor --list-only
+```
+
+To launch Optuna dashboards for the latest study databases:
+
+```bash
+python3 -m src.cp.tune.monitor --base-port 9000
+```
+
+The monitor scans `z_artifacts/outputs/ahpt/ablation/` for `study.db` files, keeps the latest run for each ablation, and serves one dashboard per study on consecutive ports.
+
+### 4. Noise Degree Testing
 
 Since realistic noise types cannot be directly defined by SNRs, calibrate noise parameters first:
 
@@ -249,13 +287,13 @@ python3 -m src.noise.noise_degree
 
 Results are saved in `z_artifacts/outputs/noise/noise_degree/[date_time]/decide_nd.json` and copied to [`src/noise/results/decide_nd.json`](src/noise/results/decide_nd.json).
 
-### 4. Model Testing
+### 5. Model Testing
 
 The model evaluation framework in [`src/testing`](src/testing) provides comprehensive assessment across multiple dimensions.
 
 #### Configure Testing
 
-Configure models and checkpoint paths in [`src/testing/config.py`](src/testing/config.py). Ensure checkpoints conform to the `get_ckpt_path` function in [`src/testing/get_models.py`](src/testing/get_models.py). Default checkpoint path: `z_artifacts/weights/[tdd/fdd]/[model_name]/model.ckpt`.
+Configure models and checkpoint paths in [`src/testing/config.py`](src/testing/config.py). Ensure checkpoints conform to the `get_ckpt_path` function in [`src/testing/get_models.py`](src/testing/get_models.py). Default checkpoint path: `z_artifacts/weights/[tdd/fdd]/[model_name]/model.ckpt`. The published experiment weights are also available from [CSI-4CAST/weights](https://huggingface.co/CSI-4CAST/weights).
 
 #### Computational Overhead Testing
 
@@ -267,7 +305,7 @@ Results saved in `z_artifacts/outputs/testing/computational_overhead/[date_time]
 
 #### Prediction Performance Testing
 
-For HPC clusters using SLURM array jobs (recommended), use [`scripts/testing.slurm`](scripts/testing.slurm) or [`scripts/testing_template.sh`](scripts/testing_template.sh) with array size matching `JOBS_PER_MODEL` in [`src/testing/config.py`](src/testing/config.py).
+For HPC clusters using SLURM array jobs, use [`scripts/testing.sh`](scripts/testing.sh) with array size matching `JOBS_PER_MODEL` in [`src/testing/config.py`](src/testing/config.py).
 
 For local execution:
 ```bash

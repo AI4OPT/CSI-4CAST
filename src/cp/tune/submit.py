@@ -5,8 +5,10 @@ from ahpt.base.submit_jobs import BaseSlurmSubmitter
 
 
 class CPSlurmSubmitter(BaseSlurmSubmitter):
+    """SLURM job submitter for CSI prediction tuning."""
+
     def _load_config(self, config_path: str) -> TuningConfig:
-        return TuningConfig.fromYaml(config_path)
+        return TuningConfig.from_yaml(config_path)
 
     def _get_experiment_name(self, config: TuningConfig) -> str:
         return config.study_name

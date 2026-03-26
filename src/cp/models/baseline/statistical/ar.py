@@ -30,6 +30,7 @@ class ARMODEL(nn.Module):
         *args,
         **kwargs,
     ):
+        """Initialize the AR model with order and optional parameters."""
         super().__init__()
         self.name = "AR"
         self.is_separate_antennas = False
@@ -47,6 +48,7 @@ class ARMODEL(nn.Module):
             self.load_parameters(param_path)
 
     def __str__(self) -> str:
+        """Return the model name."""
         return self.name
 
     @property

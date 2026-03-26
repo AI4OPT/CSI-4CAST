@@ -16,6 +16,7 @@ class LSTMPredictor(nn.Module):
 
     def __init__(self, dim_model: int, num_layers: int = 2, hidden_dim: int = 512,
                  dropout: float = 0.1, bidirectional: bool = False):
+        """Initialize the LSTM predictor layers."""
         super().__init__()
         recurrent_dropout = dropout if num_layers > 1 else 0.0
         self.lstm = nn.LSTM(
@@ -26,12 +27,15 @@ class LSTMPredictor(nn.Module):
         self.proj = nn.Linear(out_dim, dim_model)
 
     def forward(self, x):
+        """Run sequence prediction through the LSTM."""
         # x: (B, L, dim_model)
         x, _ = self.lstm(x)  # -> (B, L, hidden_dim * D)
         return self.proj(x)  # -> (B, L, dim_model)
 
 
 class Model(AblationTDDModel):
+    """TDD ablation model with LSTM predictor."""
+
     def _build_transformer(self) -> nn.Module:
         p = self._p
         return LSTMPredictor(
@@ -44,5 +48,7 @@ class Model(AblationTDDModel):
 
 
 class LSTM_REPLACE_PRED_TDD(AblationLightningModel):
+    """Ablation: TDD model with LSTM-replaced predictor."""
+
     model_class = Model
     model_display_name = "LSTM_REPLACE_PRED"

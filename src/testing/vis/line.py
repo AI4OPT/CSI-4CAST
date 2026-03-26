@@ -212,13 +212,22 @@ def setup_axis_ticks(ax, df: pd.DataFrame, var_1: str):
 
 
 def get_broken_axis_outlier_model(df_agg: pd.DataFrame, gap_threshold: float = 2.0) -> str | None:
-    """Return the outlier model to isolate in the top axis, or None if no large gap exists.
+    """Return the model that should be isolated in a broken-axis plot.
 
-    The decision is based on full line separation:
-    - Rank lines by model-wise max(obj_mean_agg), descending
-    - Let top_line be the highest-max model and second_line be the next one
-    - Use broken axis only if:
-      min(top_line) >= gap_threshold * max(second_line)
+    The function compares the top two model curves after aggregating each
+    model by the minimum and maximum plotted value. A broken axis is used
+    only when the strongest model stays sufficiently separated from the
+    second one across the full line.
+
+    Args:
+        df_agg: Aggregated plotting dataframe.
+        gap_threshold: Minimum ratio required between the top line and the
+            second line before using a broken axis.
+
+    Returns:
+        The outlier model name if a broken axis is warranted, otherwise
+        ``None``.
+
     """
     if gap_threshold <= 1:
         gap_threshold = 1.0
@@ -226,7 +235,9 @@ def get_broken_axis_outlier_model(df_agg: pd.DataFrame, gap_threshold: float = 2
     if "model" not in df_agg.columns or "obj_mean_agg" not in df_agg.columns:
         return None
 
-    model_stats = df_agg.groupby("model")["obj_mean_agg"].agg(["min", "max"]).dropna().sort_values("max", ascending=False)
+    model_stats = (
+        df_agg.groupby("model")["obj_mean_agg"].agg(["min", "max"]).dropna().sort_values("max", ascending=False)
+    )
     if len(model_stats) < 2:
         return None
 
@@ -246,16 +257,30 @@ def get_broken_axis_outlier_model(df_agg: pd.DataFrame, gap_threshold: float = 2
 
 
 def should_use_broken_axis(df_agg: pd.DataFrame, gap_threshold: float = 2.0) -> bool:
-    """Determine whether broken axis should be used based on outlier-vs-second-largest ratio."""
+    """Return whether the plot should use a broken y-axis.
+
+    Args:
+        df_agg: Aggregated plotting dataframe.
+        gap_threshold: Minimum separation ratio required to treat one
+            model as an outlier line.
+
+    Returns:
+        ``True`` when a broken axis should be used, otherwise ``False``.
+
+    """
     return get_broken_axis_outlier_model(df_agg, gap_threshold=gap_threshold) is not None
 
 
 def find_best_legend_position(ax_top, ax_bottom):
-    """Automatically find the best position for legend by analyzing data density.
+    """Find the least obstructive legend position across two axes.
+
+    The function approximates the legend footprint in each corner of the
+    top and bottom axes and chooses the location that overlaps the fewest
+    plotted points.
 
     Returns:
-        tuple: (axis, location) where axis is ax_top or ax_bottom,
-               and location is the matplotlib location string
+        Tuple of ``(axis, location)`` where ``axis`` is the chosen axis
+        object and ``location`` is a matplotlib legend location string.
 
     """
     # Define possible legend locations
@@ -314,7 +339,7 @@ def find_best_legend_position(ax_top, ax_bottom):
 
 
 def add_axis_break_indicators(ax_top, ax_bottom, break_size: float = 0.02):
-    """Add visual indicators for axis break."""
+    """Add diagonal break markers between two stacked axes."""
     # Add break lines
     d = break_size  # size of break indicator
 
@@ -330,7 +355,16 @@ def add_axis_break_indicators(ax_top, ax_bottom, break_size: float = 0.02):
 
 
 def set_labels_ticks_and_titles(ax, df: pd.DataFrame, obj: str, var_1: str, var_2: str | None = None):
-    """Set up axis labels, ticks, title, legend and grid for a plot."""
+    """Set labels, ticks, legend, and grid styling for one plot.
+
+    Args:
+        ax: Target matplotlib axis.
+        df: Dataframe used to infer axis labels and tick ranges.
+        obj: Objective name plotted on the y-axis.
+        var_1: Primary variable plotted on the x-axis.
+        var_2: Optional secondary grouping variable.
+
+    """
     # set y-label and y-ticks
     ax.set_ylabel(obj.upper(), fontweight="bold")
 
@@ -510,7 +544,7 @@ class Vis:
     """
 
     def __init__(self, df: pd.DataFrame):
-        """Initialize the visualization analyzer.
+        """Initialize the line-plot visualization helper.
 
         Parameters
         ----------
@@ -522,12 +556,22 @@ class Vis:
         self.setup_plotting()
 
     def setup_plotting(self):
-        """Set up plotting style using vis_utils."""
+        """Set up the shared plotting style for line figures."""
         set_plot_style()
         plt.style.use("default")  # Use default style with custom parameters
 
     def _plot_model_data(self, ax, model_data, model, var_1, var_2, is_std):
-        """Plot data for a specific model on given axis."""
+        """Plot one model's aggregated curve on the target axis.
+
+        Args:
+            ax: Target matplotlib axis.
+            model_data: Aggregated dataframe for one model.
+            model: Model identifier.
+            var_1: Primary x-axis variable.
+            var_2: Optional secondary grouping variable.
+            is_std: Whether to include standard deviation error bars.
+
+        """
         if var_2 is not None:
             list_var_2_values = sorted(list(model_data[var_2].unique()))
             list_alpha_levels = np.linspace(1, 0.3, len(list_var_2_values))
@@ -611,13 +655,6 @@ class Vis:
         ]
         return df_filtered  # type: ignore
 
-    """
-    different model -> different line style
-    obj -> for the y-axis, e.g., nmse, se, se0
-    var_1 -> for the x-axis, e.g., cm, ds, ms, noise_degree
-    var_2 -> if provided, several groups line will be stacked on the same plot
-    """
-
     def default_line_plot(
         self,
         df: pd.DataFrame,
@@ -630,9 +667,27 @@ class Vis:
         broken_axis_gap_threshold: float = 2.0,  # largest/second-largest ratio threshold
         add_generalization_bg: bool | None = False,  # whether to add generalization background colors
     ):
-        """Create line plots with support for both regular and broken axis layouts.
+        """Create one line plot with optional broken-axis handling.
 
-        Automatically detects whether to use broken axis based on data characteristics.
+        The plot can show one curve per model or several grouped curves
+        when ``var_2`` is provided. It also supports automatic broken-axis
+        detection and optional highlighting of regular versus
+        generalization ranges.
+
+        Args:
+            df: Raw dataframe to aggregate and plot.
+            obj: Objective to plot on the y-axis, such as ``nmse`` or ``se``.
+            var_1: Primary variable to plot on the x-axis.
+            var_2: Optional secondary grouping variable.
+            output_dir: Output path prefix used when saving the figure.
+            is_std: Whether to include standard deviation error bars.
+            use_broken_axis: Whether to force or disable broken-axis mode.
+                If ``None``, the function decides automatically.
+            broken_axis_gap_threshold: Ratio threshold used by the
+                broken-axis detector.
+            add_generalization_bg: Whether to add background shading for
+                regular and generalization ranges.
+
         """
         if df.empty:
             print(f"Skipping empty line plot for obj={obj}, var_1={var_1}, var_2={var_2}")
@@ -668,7 +723,10 @@ class Vis:
 
         df_agg = (
             df.groupby(group_cols, group_keys=False)
-            .apply(lambda g: aggregate_mean_std(g, mean_col="obj_mean", std_col="obj_std"), include_groups=False)  # type: ignore the pandas include_groups
+            .apply(
+                lambda g: aggregate_mean_std(g, mean_col="obj_mean", std_col="obj_std"),
+                include_groups=False,  # type: ignore the pandas include_groups
+            )
             .reset_index()
         )
 
@@ -830,7 +888,18 @@ def plot_regular(
     dir_output: Path,
     broken_axis_gap_threshold: float = 2.0,
 ) -> Path:
-    """Create regular line plots for model performance analysis."""
+    """Create line plots for regular test settings.
+
+    Args:
+        path_consolidated_results: Path to the consolidated results CSV.
+        dir_output: Output directory for generated figures.
+        broken_axis_gap_threshold: Ratio threshold used by the broken-axis
+            detector.
+
+    Returns:
+        The output directory containing the generated plots.
+
+    """
     objectives = ["nmse", "se"]
     df = pd.read_csv(path_consolidated_results)
     vis = Vis(df)
@@ -881,7 +950,18 @@ def plot_robustness(
     dir_output: Path,
     broken_axis_gap_threshold: float = 2.0,
 ) -> Path:
-    """Create robustness line plots for model performance analysis."""
+    """Create line plots for robustness test settings.
+
+    Args:
+        path_consolidated_results: Path to the consolidated results CSV.
+        dir_output: Output directory for generated figures.
+        broken_axis_gap_threshold: Ratio threshold used by the broken-axis
+            detector.
+
+    Returns:
+        The output directory containing the generated plots.
+
+    """
     objectives = ["nmse", "se"]
     df = pd.read_csv(path_consolidated_results)
     vis = Vis(df)
@@ -932,7 +1012,18 @@ def plot_generalization(
     dir_output: Path,
     broken_axis_gap_threshold: float = 2.0,
 ) -> Path:
-    """Create generalization line plots for model performance analysis."""
+    """Create line plots for generalization test settings.
+
+    Args:
+        path_consolidated_results: Path to the consolidated results CSV.
+        dir_output: Output directory for generated figures.
+        broken_axis_gap_threshold: Ratio threshold used by the broken-axis
+            detector.
+
+    Returns:
+        The output directory containing the generated plots.
+
+    """
     objectives = ["nmse", "se"]
     df = pd.read_csv(path_consolidated_results)
     vis = Vis(df)
@@ -995,7 +1086,15 @@ def plot_line(
     dir_output: Path,
     broken_axis_gap_threshold: float = 2.0,
 ) -> None:
-    """Create all line plots (regular, robustness, and generalization)."""
+    """Create the full line-plot visualization suite.
+
+    Args:
+        path_consolidated_results: Path to the consolidated results CSV.
+        dir_output: Root output directory for all line-plot artifacts.
+        broken_axis_gap_threshold: Ratio threshold used by the broken-axis
+            detector.
+
+    """
     dir_output.mkdir(parents=True, exist_ok=True)
 
     # Create subdirectories for each plot type

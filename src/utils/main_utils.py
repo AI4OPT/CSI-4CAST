@@ -64,9 +64,9 @@ def make_config(path_config: str):
 
     """
     if path_config.endswith(".json"):
-        config = ExperimentConfig.fromJson(path_config)
+        config = ExperimentConfig.from_json(path_config)
     elif path_config.endswith(".yaml"):
-        config = ExperimentConfig.fromYaml(path_config)
+        config = ExperimentConfig.from_yaml(path_config)
     else:
         raise ValueError(f"Unsupported config file format: {path_config}. Use .json or .yaml")
     return config
@@ -95,7 +95,7 @@ def make_output_dir(config: ExperimentConfig) -> Path:
 
     # Save a copy of the configuration for reproducibility
     path_config_copy = output_dir / "config_copy.yaml"
-    config.saveYaml(str(path_config_copy))
+    config.save_yaml(str(path_config_copy))
 
     return output_dir
 

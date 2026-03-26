@@ -10,5 +10,7 @@ class Model(AblationTDDModel):
 
 
 class ADD_SUBCARRIER_ARL_TDD(AblationLightningModel):
+    """Ablation: TDD model with added subcarrier ARL."""
+
     model_class = Model
     model_display_name = "ADD_SUBCARRIER_ARL"

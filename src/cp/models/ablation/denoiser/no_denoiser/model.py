@@ -10,5 +10,7 @@ class Model(AblationTDDModel):
 
 
 class NO_DENOISER_TDD(AblationLightningModel):
+    """Ablation: TDD model without denoiser."""
+
     model_class = Model
     model_display_name = "NO_DENOISER"

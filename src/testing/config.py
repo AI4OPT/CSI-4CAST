@@ -200,6 +200,7 @@ def get_array_mapping(array_id: int) -> tuple[str, str, str, tuple[int, int]]:
 
     Returns:
         (model_name, scenario, test_type, (slice_idx, total_slices))
+
     """
     for m, s, t, start, end in get_setting_array_ranges():
         if start <= array_id <= end:

@@ -71,7 +71,6 @@ def main(
     baseline_only: bool = False,
 ) -> dict:
     """Run the complete results workflow: check -> gather -> analyse."""
-
     if verbose:
         print("=" * 80)
         print("PREDICTION PERFORMANCE TESTING - RESULTS WORKFLOW")

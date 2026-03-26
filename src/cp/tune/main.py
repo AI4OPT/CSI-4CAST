@@ -20,6 +20,7 @@ from src.cp.tune.submit import CPSlurmSubmitter
 
 
 def main():
+    """Parse arguments and launch the tuning workflow."""
     parser = argparse.ArgumentParser(description="CP ablation hyperparameter tuning")
     parser.add_argument("--config", required=True, nargs="+", help="Tuning YAML(s)")
     parser.add_argument("--num_workers", type=int, default=1, help="Workers per study")

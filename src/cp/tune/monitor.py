@@ -1,6 +1,4 @@
-#!/usr/bin/env python3
-"""
-Optuna Dashboard Monitor for ablation studies.
+"""Launch Optuna dashboards for ablation studies.
 
 Discovers every study.db under z_artifacts/outputs/ahpt/ablation/ and
 launches an optuna-dashboard instance for each one on its own port.
@@ -17,8 +15,7 @@ import subprocess
 import time
 
 
-BASE_DIR = Path("/storage/home/hcoda1/1/scheng326/CSI-4CAST")
-ABLATION_DIR = BASE_DIR / "z_artifacts" / "outputs" / "ahpt" / "ablation"
+ABLATION_DIR = Path("z_artifacts") / "outputs" / "ahpt" / "ablation"
 
 
 def discover_study_dbs(ablation_dir: Path) -> list[tuple[str, Path]]:
@@ -34,7 +31,6 @@ def discover_study_dbs(ablation_dir: Path) -> list[tuple[str, Path]]:
     best: dict[str, Path] = {}
 
     for db_path in sorted(ablation_dir.rglob("study.db")):
-        # e.g. arl/no_arl_tdd/20260303_210853/study.db
         rel = db_path.relative_to(ablation_dir)
         key = str(rel.parent.parent)  # category/name
         if key not in best or db_path.stat().st_mtime > best[key].stat().st_mtime:
@@ -48,6 +44,7 @@ def discover_study_dbs(ablation_dir: Path) -> list[tuple[str, Path]]:
 
 
 def launch_dashboard(label: str, db_path: Path, port: int) -> subprocess.Popen | None:
+    """Start one optuna-dashboard process for a study database."""
     storage_url = f"sqlite:///{db_path.absolute()}"
     cmd = ["optuna-dashboard", storage_url, "--port", str(port), "--host", "0.0.0.0"]
 
@@ -56,7 +53,7 @@ def launch_dashboard(label: str, db_path: Path, port: int) -> subprocess.Popen |
         time.sleep(2)
         if proc.poll() is None:
             return proc
-        stdout, stderr = proc.communicate()
+        _, stderr = proc.communicate()
         print(f"  FAILED {label} (port {port})")
         if stderr:
             print(f"    stderr: {stderr.strip()}")
@@ -66,7 +63,8 @@ def launch_dashboard(label: str, db_path: Path, port: int) -> subprocess.Popen |
         return None
 
 
-def main():
+def main() -> None:
+    """Parse arguments and launch dashboard processes."""
     parser = argparse.ArgumentParser(description="Launch optuna-dashboard for all ablation study.db files")
     parser.add_argument(
         "--ablation-dir",

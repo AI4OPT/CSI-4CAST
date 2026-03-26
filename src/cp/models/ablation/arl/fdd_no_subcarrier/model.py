@@ -10,5 +10,7 @@ class Model(AblationFDDModel):
 
 
 class NO_SUBCARRIER_ARL_FDD(AblationLightningModel):
+    """Ablation: FDD model without subcarrier ARL."""
+
     model_class = Model
     model_display_name = "NO_SUBCARRIER_ARL"

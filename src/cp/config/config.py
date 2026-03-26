@@ -25,12 +25,12 @@ Usage:
     config = ExperimentConfig()
 
     # Load from file
-    config = ExperimentConfig.fromYaml('config.yaml')
-    config = ExperimentConfig.fromJson('config.json')
+    config = ExperimentConfig.from_yaml('config.yaml')
+    config = ExperimentConfig.from_json('config.json')
 
     # Save configuration
-    config.saveYaml('output_config.yaml')
-    config.saveJson('output_config.json')
+    config.save_yaml('output_config.yaml')
+    config.save_json('output_config.json')
 
     # Command line usage
     python3 -m src.cp.config.config --model RNN --is_U2D
@@ -290,7 +290,7 @@ class ExperimentConfig:
             self.output_dir = str(Path(DIR_OUTPUTS) / self.prefix / self.model_name)
 
     @classmethod
-    def fromDict(cls, dict_config: dict[str, Any]) -> "ExperimentConfig":
+    def from_dict(cls, dict_config: dict[str, Any]) -> "ExperimentConfig":
         """Create config from dictionary."""
         # Handle nested configurations
         if "data" in dict_config and isinstance(dict_config["data"], dict):
@@ -309,14 +309,14 @@ class ExperimentConfig:
         return cls(**dict_config)
 
     @classmethod
-    def fromJson(cls, path_json: str) -> "ExperimentConfig":
+    def from_json(cls, path_json: str) -> "ExperimentConfig":
         """Load config from JSON file."""
-        with open(path_json) as f:
+        with open(path_json, encoding="utf-8") as f:
             dict_config = json.load(f)
-        return cls.fromDict(dict_config)
+        return cls.from_dict(dict_config)
 
     @classmethod
-    def fromYaml(cls, path_yaml: str) -> "ExperimentConfig":
+    def from_yaml(cls, path_yaml: str) -> "ExperimentConfig":
         """Load config from YAML file."""
 
         # Register a constructor for the python/tuple tag to convert to list
@@ -325,36 +325,34 @@ class ExperimentConfig:
 
         yaml.SafeLoader.add_constructor("tag:yaml.org,2002:python/tuple", tuple_constructor)
 
-        with open(path_yaml) as f:
+        with open(path_yaml, encoding="utf-8") as f:
             dict_config = yaml.safe_load(f)
 
-        return cls.fromDict(dict_config)
+        return cls.from_dict(dict_config)
 
-    def toDict(self) -> dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         """Convert config to dictionary."""
 
-        def _toDict(obj) -> Any:
+        def _to_dict(obj: Any) -> Any:
             if hasattr(obj, "__dict__"):
-                return {k: _toDict(v) for k, v in obj.__dict__.items()}
-            elif isinstance(obj, (list, tuple)):
-                return [_toDict(item) for item in obj]
-            else:
-                return obj
+                return {k: _to_dict(v) for k, v in obj.__dict__.items()}
+            if isinstance(obj, (list, tuple)):
+                return [_to_dict(item) for item in obj]
+            return obj
 
-        return _toDict(self)
+        return _to_dict(self)
 
-    def saveJson(self, path_json: str):
+    def save_json(self, path_json: str) -> None:
         """Save config to JSON file."""
         Path(path_json).parent.mkdir(parents=True, exist_ok=True)
-        with open(path_json, "w") as f:
-            json.dump(self.toDict(), f, indent=4)
+        with open(path_json, "w", encoding="utf-8") as f:
+            json.dump(self.to_dict(), f, indent=4)
 
-    def saveYaml(self, path_yaml: str):
+    def save_yaml(self, path_yaml: str) -> None:
         """Save config to YAML file."""
         Path(path_yaml).parent.mkdir(parents=True, exist_ok=True)
-        with open(path_yaml, "w") as f:
-            yaml.dump(self.toDict(), f, default_flow_style=False, allow_unicode=True)
-
+        with open(path_yaml, "w", encoding="utf-8") as f:
+            yaml.dump(self.to_dict(), f, default_flow_style=False, allow_unicode=True)
 
 if __name__ == "__main__":
     import argparse
@@ -365,7 +363,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Experiment configuration management")
     parser.add_argument("--model", "-m", type=str, default="RNN", help="Model name")
     parser.add_argument(
-        "--output-dir", "-o", type=str, default="z_artifacts/config/cp", help="Output directory for config files"
+        "--output-dir",
+        "-o",
+        type=str,
+        default="z_artifacts/config/cp",
+        help="Output directory for config files",
     )
     parser.add_argument("--is_U2D", "-u", action="store_true", help="Use U2D (FDD) configuration")
     parser.add_argument("--config-file", "-c", type=str, default="yaml", help="Path to config file (JSON or YAML)")
@@ -408,8 +410,8 @@ if __name__ == "__main__":
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     if args.config_file == "yaml":
-        config.saveYaml(str(output_dir / config.model_name.lower() / f"{config.experiment_name.lower()}.yaml"))
+        config.save_yaml(str(output_dir / config.model_name.lower() / f"{config.experiment_name.lower()}.yaml"))
     elif args.config_file == "json":
-        config.saveJson(str(output_dir / config.model_name.lower() / f"{config.experiment_name.lower()}.json"))
+        config.save_json(str(output_dir / config.model_name.lower() / f"{config.experiment_name.lower()}.json"))
     else:
         raise ValueError(f"Unsupported config file format: {args.config_file}. Use 'yaml' or 'json'.")

@@ -77,6 +77,7 @@ def _rollout_ar_predictions(
 
     Returns:
         Predicted tensor with shape [S, N, pred_len, K].
+
     """
     s, n, _, num_k = hist.shape
     dtype = np.complex64
@@ -136,6 +137,7 @@ def estimate_ar_parameters(
             - "order": scalar int
             - "num_antennas": scalar int
             - "num_subcarriers": scalar int
+
     """
     if ridge_lambda < 0:
         raise ValueError(f"ridge_lambda must be non-negative, got {ridge_lambda}")
@@ -227,6 +229,7 @@ def estimate_ar_parameters_with_order_selection(
         order_candidates: Candidate AR orders to evaluate, e.g., [1, 2, 3, 4].
         ridge_lambda: Ridge regularization.
         metric: Validation metric: "mse" or "nmse".
+        mean_center: Whether to subtract the mean before estimation.
         checkpoint_path: If provided, save best-so-far params to this path after each candidate.
         concat_target: If True and train_target is provided, concatenate train_hist
             and train_target along the time axis before fitting. This gives more
@@ -241,6 +244,7 @@ def estimate_ar_parameters_with_order_selection(
             - candidate_orders (int array)
             - candidate_train_errors (float array; NaN if train_target not provided)
             - candidate_errors (float array)
+
     """
     if ridge_lambda < 0:
         raise ValueError(f"ridge_lambda must be non-negative, got {ridge_lambda}")

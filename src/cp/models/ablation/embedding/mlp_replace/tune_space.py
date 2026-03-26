@@ -6,8 +6,11 @@ from src.cp.models.ablation.base import AblationHyperparameterSpace, get_tdd_bas
 
 
 class HyperparameterSpace(AblationHyperparameterSpace):
+    """Tuning space for the MLP-embedding ablation."""
+
     @staticmethod
     def suggest_model_params(trial: optuna.Trial, model_name: str) -> dict:
+        """Suggest model parameters for this ablation."""
         params = get_tdd_base_model_params()
         params["embedding_mlp_num_layers"] = trial.suggest_int("embedding_mlp_num_layers", 2, 6)
         params["embedding_mlp_hidden_dim"] = trial.suggest_categorical(

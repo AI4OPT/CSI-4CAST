@@ -58,6 +58,7 @@ def estimate_wiener_parameters(
             - "mu_x": [num_subcarriers, num_antennas*hist_len] complex64
             - "mu_y": [num_subcarriers, num_antennas*pred_len] complex64
             - "num_antennas", "hist_len", "pred_len", "num_subcarriers": scalar ints
+
     """
     if ridge_lambda < 0:
         raise ValueError(f"ridge_lambda must be non-negative, got {ridge_lambda}")
@@ -139,6 +140,7 @@ def _predict_wiener(
 
     Returns:
         Predicted array [S, N, pred_len, K].
+
     """
     s, n, l, num_k = x_hist.shape
     dtype = np.complex64

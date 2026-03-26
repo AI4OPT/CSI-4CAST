@@ -18,15 +18,16 @@ class BaseSlurmSubmitter(ABC):
     """Abstract base class for SLURM job submission."""
 
     def __init__(self, base_dir, scripts_dir=None, timestamp=None, slurm_settings=None):
+        """Initialize the SLURM submitter with directories and optional overrides."""
         self.base_dir = Path(base_dir)
 
-        # Use provided timestamp or generate new one
+        # Use the provided timestamp or generate a new one
         if timestamp is not None:
             self.timestamp = timestamp
         else:
             self.timestamp = get_current_time()
 
-        # Use custom scripts_dir if provided, otherwise use default
+        # Use a custom scripts_dir if provided, otherwise use the default
         if scripts_dir is not None:
             scripts_dir = Path(scripts_dir)
         else:
@@ -43,14 +44,14 @@ class BaseSlurmSubmitter(ABC):
 
         # Default SLURM settings
         self.default_slurm_settings = {
-            "account": "gts-phentenryck3-coda20",
-            "partition": "gpu-h200",
-            "qos": "inferno",
+            "account": "[ACCOUNT_NAME]",
+            "partition": "[PARTITION_NAME]",
+            "qos": "[QOS_NAME]",
             "nodes": 1,
             "gres": "gpu:1",
             "gres_flags": "enforce-binding",
             "mem": "256G",
-            "time": "35:00:00",
+            "time": "30:00:00",
         }
 
         if slurm_settings is not None:
@@ -244,8 +245,8 @@ class BaseSlurmSubmitter(ABC):
             echo ""
 
             # Environment setup
-            module load mamba/1.4.9
-            mamba activate csi-pred
+            module load mamba
+            mamba activate csi-4cast-env
 
             # Set working directory
             cd {base_dir}

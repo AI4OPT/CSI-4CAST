@@ -1,3 +1,5 @@
+"""Activation helpers shared across CSI models."""
+
 import torch.nn as nn
 
 

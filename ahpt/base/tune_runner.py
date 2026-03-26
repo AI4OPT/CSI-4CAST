@@ -23,10 +23,11 @@ class BaseTuningRunner(ABC):
     """Abstract base class for tuning runners."""
 
     def __init__(self, tuning_config, output_dir: Path, worker_id: int = 1):
+        """Initialize the runner with tuning config and output directory."""
         self.tuning_config = tuning_config
         self.worker_id = worker_id
 
-        # Setup worker-specific temporary directory
+        # Set up a worker-specific temporary directory
         self._setup_worker_directories(output_dir)
 
         # Log directory setup
@@ -37,17 +38,17 @@ class BaseTuningRunner(ABC):
         self._setup_optuna()
 
     def _setup_worker_directories(self, output_dir):
-        """Setup worker-specific directories using target storage directly."""
+        """Set up worker-specific directories using target storage directly."""
         self.temp_dir = output_dir
 
     def _setup_optuna(self):
-        """Setup Optuna study configuration."""
+        """Set up the Optuna study configuration."""
         if self.worker_id and self.worker_id > 1:
             delay = 60 * (self.worker_id - 1)
             print(f"Worker {self.worker_id} waiting {delay:.2f}s to reduce race conditions...")
             time.sleep(delay)
 
-        # Setup storage with enhanced SQLite parameters for concurrency
+        # Set up storage with enhanced SQLite parameters for concurrency
         study_db_path = self.temp_dir / "study.db"
         storage_url = f"sqlite:///{study_db_path.absolute()}?cache=shared&timeout=1200"
         print(f"Using dynamic storage URL: {storage_url}")
@@ -58,7 +59,7 @@ class BaseTuningRunner(ABC):
             grace_period=180,
         )
 
-        # Setup pruner
+        # Set up the pruner
         if self.tuning_config.enable_pruning:
             pruner = optuna.pruners.MedianPruner(
                 n_startup_trials=self.tuning_config.pruning_warmup_trials,
@@ -68,7 +69,7 @@ class BaseTuningRunner(ABC):
         else:
             pruner = optuna.pruners.NopPruner()
 
-        # Setup sampler with time-based random seed
+        # Set up the sampler with a time-based random seed
         time_seed = int(time.time() * 1000) % (2**31)
         worker_seed = time_seed + (self.worker_id * 1000) + time_seed
         random.seed(worker_seed)
@@ -80,7 +81,10 @@ class BaseTuningRunner(ABC):
             multivariate=True,
         )
 
-        print(f"Worker {self.worker_id} using time-based seed: {worker_seed} for maximum exploration")
+        print(
+            f"Worker {self.worker_id} using time-based seed: {worker_seed} "
+            "for maximum exploration"
+        )
 
         # Create or load study
         self.study = optuna.create_study(
@@ -98,7 +102,10 @@ class BaseTuningRunner(ABC):
         if existing_trials > 0:
             print(f"Latest trial numbers: {[t.number for t in self.study.trials[-3:]]}")
             print(f"Running trials: {[t.number for t in self.study.trials if t.state.name == 'RUNNING']}")
-            print(f"Completed trials: {[t.number for t in self.study.trials if t.state.name == 'COMPLETE']}")
+            print(
+                "Completed trials: "
+                f"{[t.number for t in self.study.trials if t.state.name == 'COMPLETE']}"
+            )
 
     def run_tuning(self) -> dict:
         """Run hyperparameter tuning experiment."""
@@ -106,7 +113,7 @@ class BaseTuningRunner(ABC):
         if self.worker_id:
             print(f"Worker ID: {self.worker_id}")
 
-        # Setup callbacks
+        # Set up callbacks
         tuning_callbacks = []
         if hasattr(self.tuning_config, "verbose") and self.tuning_config.verbose:
             tuning_callbacks.append(self._trial_callback)
@@ -117,12 +124,18 @@ class BaseTuningRunner(ABC):
 
         max_trials_callback = optuna.study.MaxTrialsCallback(
             n_trials=total_target_trials,
-            states=(optuna.trial.TrialState.COMPLETE, optuna.trial.TrialState.PRUNED, optuna.trial.TrialState.FAIL),
+            states=(
+                optuna.trial.TrialState.COMPLETE,
+                optuna.trial.TrialState.PRUNED,
+                optuna.trial.TrialState.FAIL,
+            ),
         )
         tuning_callbacks.append(max_trials_callback)
 
         print(
-            f"Trial planning: {existing_trials} existing + {self.tuning_config.n_trials} new = {total_target_trials} total target"
+            "Trial planning: "
+            f"{existing_trials} existing + {self.tuning_config.n_trials} new = "
+            f"{total_target_trials} total target"
         )
 
         start_time = time.time()
@@ -164,7 +177,7 @@ class BaseTuningRunner(ABC):
         pass
 
     def _trial_callback(self, study: optuna.Study, trial):
-        """Callback function called after each trial."""
+        """Log trial results after completion."""
         if not hasattr(trial, "state"):
             print(f"Trial {trial.number}: State not available yet")
             return

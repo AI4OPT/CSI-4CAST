@@ -1,9 +1,14 @@
+"""Residual convolution blocks shared by CSI models."""
+
 import torch
 import torch.nn as nn
 
 
 class ChannelAttention(nn.Module):
+    """Channel attention block for convolutional feature maps."""
+
     def __init__(self, in_planes, ratio=4):
+        """Initialize channel attention pooling and FC layers."""
         super().__init__()
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
         self.max_pool = nn.AdaptiveMaxPool2d(1)
@@ -15,6 +20,7 @@ class ChannelAttention(nn.Module):
         self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
+        """Compute channel attention weights."""
         # x has shape B, C, H, W
         # self.avg_pool(x) has shape B, C, 1, 1
         avg_out = self.fc2(self.relu1(self.fc1(self.avg_pool(x))))
@@ -24,7 +30,10 @@ class ChannelAttention(nn.Module):
 
 
 class ResBlock(nn.Module):
+    """Residual convolution block with channel attention."""
+
     def __init__(self, in_planes):
+        """Initialize the residual convolution block."""
         super().__init__()
 
         self.conv1 = nn.Conv2d(in_planes, in_planes, 3, 1, 1)
@@ -33,6 +42,7 @@ class ResBlock(nn.Module):
         self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
+        """Apply the residual block."""
         rs1 = self.relu(self.conv1(x))
         rs1 = self.conv2(rs1)
         channel_attn = self.ca(rs1)

@@ -1,8 +1,13 @@
+"""Generic MLP building block used by CSI models."""
+
 import torch.nn as nn
 
 
 class MLP(nn.Module):
+    """Configurable multilayer perceptron."""
+
     def __init__(self, in_dim: int, out_dim: int, num_layers: int, hidden_dim: int, output_activation: nn.Module):
+        """Initialize MLP layers with the given dimensions."""
         super().__init__()
 
         self.in_dim = in_dim
@@ -35,5 +40,6 @@ class MLP(nn.Module):
             self.mlp = nn.Sequential(nn.Linear(in_dim, out_dim), self.output_activation)
 
     def forward(self, x):
+        """Apply the MLP to the input tensor."""
         x = self.mlp(x)
         return x

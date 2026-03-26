@@ -171,6 +171,7 @@ if __name__ == "__main__":
         _model_ref, _input_ref = model, input_data
 
         def run_single_inference(_m=_model_ref, _inp=_input_ref, _dev=device) -> None:
+            """Run a single inference pass for timing measurement."""
             _m.eval()
             with torch.inference_mode():
                 _ = _m(_inp)

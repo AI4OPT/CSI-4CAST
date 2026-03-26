@@ -54,6 +54,7 @@ def count_rows_for_setting(
 
     Returns:
         (completed_rows, num_slices_found)
+
     """
     setting_dir = base_dir / model / scenario / test_type
     if not setting_dir.exists():

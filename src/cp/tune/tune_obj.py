@@ -11,8 +11,10 @@ from src.cp.models import PREDICTORS
 
 
 class CPTuningObjective(BaseTuningObjective):
+    """Optuna objective for CSI prediction tuning trials."""
+
     def _setup_base_config(self):
-        return ExperimentConfig.fromYaml(self.tuning_config.base_config_path)
+        return ExperimentConfig.from_yaml(self.tuning_config.base_config_path)
 
     def _setup_hyperparameter_space(self):
         module = importlib.import_module(self.tuning_config.tune_space_file)

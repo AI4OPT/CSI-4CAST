@@ -82,9 +82,17 @@ def _pronyvec(
 
     Args:
         y: ``[subcarriernum, hist_len, Nr, Nt]`` complex tensor.
+        p: Prony model order.
+        pred_len: Number of time steps to predict.
+        startidx: Starting time index for the Prony window.
+        subcarriernum: Number of subcarriers.
+        Nt: Number of transmit antennas.
+        Nr: Number of receive antennas.
+        ridge_rel: Relative ridge regularisation strength.
 
     Returns:
         ``[subcarriernum, pred_len, Nt*Nr]`` complex tensor.
+
     """
     y = y.reshape(subcarriernum, -1, Nr, Nt)
     T = y.shape[1]
@@ -153,10 +161,19 @@ def _pad3(
 
     Args:
         y: ``[subcarriernum, hist_len, Nr, Nt]`` complex tensor (single sample).
+        p: Prony model order.
+        pred_len: Number of time steps to predict.
+        startidx: Starting time index for the Prony window.
+        subcarriernum: Number of subcarriers.
+        Nt: Number of transmit antennas.
+        Nr: Number of receive antennas.
         S: Pre-computed Kronecker DFT matrix ``[K*Nt, K*Nt]``.
+        ridge_rel: Relative ridge regularisation strength.
+        fallback_pred_ratio_threshold: Max prediction-to-history ratio before fallback.
 
     Returns:
         ``[subcarriernum, pred_len, Nt*Nr]`` complex tensor.
+
     """
     y = y.reshape(subcarriernum, -1, Nr, Nt)
 
@@ -196,6 +213,8 @@ def _pad3(
 
 
 class PADMODEL(nn.Module):
+    """Pencil-of-function Approximation of DFT (PAD) predictor."""
+
     def __init__(
         self,
         p=8,
@@ -209,6 +228,7 @@ class PADMODEL(nn.Module):
         *args,
         **kwargs,
     ):
+        """Initialize the PAD model with Prony parameters."""
         super().__init__()
 
         self.is_separate_antennas = False
@@ -231,6 +251,7 @@ class PADMODEL(nn.Module):
         self.register_buffer("S", S, persistent=False)
 
     def __str__(self) -> str:
+        """Return the model name."""
         return self.name
 
     def forward(self, y: torch.Tensor) -> torch.Tensor:
@@ -241,6 +262,7 @@ class PADMODEL(nn.Module):
 
         Returns:
             ``[batch_size, num_antennas, pred_len, num_subcarriers]`` complex.
+
         """
         y_device = y.device
         # Work in complex128 for numerical stability during the damped solve.

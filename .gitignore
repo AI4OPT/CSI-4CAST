@@ -1,6 +1,5 @@
-z_artifacts
+z_artifacts.old
 z_refer
-scripts
 src/cp/models/baseline/statistical/pad_ref.py
 # src/cp/models/baseline/statistical/pad_old.py
 .agents
@@ -8,6 +7,7 @@ src/cp/models/ablation/embedding/mobilenet_replace/mobilenetv3.py
 .vscode/
 scripts/outs/*
 scripts/*.slurm
+update_plan.md
 
 **/*.ckpt
 

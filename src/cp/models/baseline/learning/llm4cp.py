@@ -1,3 +1,11 @@
+"""LLM4CP baseline built on top of GPT-2 backbones.
+
+This module adapts pretrained GPT-2 models to CSI forecasting. It
+contains the core predictor, which combines frequency- and delay-domain
+processing with transformer layers, and the Lightning wrapper used by
+the rest of the codebase.
+"""
+
 import logging
 
 from einops import rearrange
@@ -19,6 +27,13 @@ logger = logging.getLogger(__name__)
 
 
 class LLM4CP(nn.Module):
+    """Predict CSI sequences with a GPT-2 based backbone.
+
+    The model preprocesses CSI inputs in both frequency and delay
+    domains, embeds them into the GPT-2 hidden space, and projects the
+    transformer output to the target prediction horizon.
+    """
+
     def __init__(
         self,
         gpt_type="gpt2",
@@ -42,6 +57,31 @@ class LLM4CP(nn.Module):
         dropout=0.1,
         **kwargs,
     ):
+        """Initialize the LLM4CP predictor.
+
+        Args:
+            gpt_type: GPT-2 checkpoint variant to load.
+            d_ff: Feed-forward dimension used by the output projection.
+            d_model: Embedding dimension used before the transformer.
+            gpt_layers: Number of GPT-2 blocks to retain.
+            pred_len: Number of future steps to predict.
+            prev_len: Number of historical steps provided as input.
+            mlp: Whether to unfreeze GPT-2 MLP layers.
+            res_layers: Number of residual blocks for CSI preprocessing.
+            K: Number of subcarriers.
+            UQh: User antenna horizontal dimension.
+            UQv: User antenna vertical dimension.
+            BQh: Base-station antenna horizontal dimension.
+            BQv: Base-station antenna vertical dimension.
+            patch_size: Patch size used in the preprocessing layers.
+            stride: Reserved stride parameter.
+            res_dim: Channel width for residual preprocessing blocks.
+            embed: Embedding mode for temporal features.
+            freq: Time-feature frequency code.
+            dropout: Dropout probability for embeddings.
+            **kwargs: Additional keyword arguments.
+
+        """
         super().__init__()
         # self.device = torch.device('cuda:{}'.format(gpu_id))
 
@@ -119,13 +159,23 @@ class LLM4CP(nn.Module):
         self.RB_f.append(nn.Conv2d(res_dim, 2, 3, 1, 1))
 
     def __str__(self):
+        """Return the model name used in logs and registries."""
         return self.name
 
-    """
-    - input: x_enc [B (batch_size), L = 16 (hist_len), D (input_dim)]
-    """
-
     def forward(self, x_enc, x_mark_enc=None, x_dec=None, x_mark_dec=None, mask=None):
+        """Run the LLM4CP forward pass.
+
+        Args:
+            x_enc: Input CSI history tensor.
+            x_mark_enc: Optional time markers aligned with ``x_enc``.
+            x_dec: Unused decoder input placeholder for compatibility.
+            x_mark_dec: Unused decoder marker placeholder.
+            mask: Optional attention mask placeholder.
+
+        Returns:
+            Predicted CSI sequence for the configured forecast horizon.
+
+        """
         x_enc, mean, std = batch_normalizer(x_enc)  # [B, L, D] (512, 16, 96)
 
         B, L, enc_in = x_enc.shape  # [B, L, D] (512, 16, 96)
@@ -176,9 +226,22 @@ class LLM4CP(nn.Module):
 
 
 class LLM4CP_pl(BaseCSIModel):
-    """LLM4CP model for CSI prediction using GPT-2 architecture."""
+    """Lightning wrapper for the GPT-based CSI predictor.
+
+    This class attaches the core LLM4CP model to the shared optimizer,
+    scheduler, and loss setup used throughout the repository.
+    """
 
     def __init__(self, config: ExperimentConfig, *args, **kwargs):
+        """Build the Lightning wrapper from an experiment config.
+
+        Args:
+            config: Experiment configuration containing model and
+                optimization settings.
+            *args: Passed to the parent class.
+            **kwargs: Passed to the parent class.
+
+        """
         super().__init__(
             optimizer_config=config.optimizer,
             scheduler_config=config.scheduler,
@@ -192,9 +255,19 @@ class LLM4CP_pl(BaseCSIModel):
         self.model = LLM4CP(**config.model.params)
 
     def __str__(self):
+        """Return the model name used in logs and registries."""
         return self.name
 
     def forward(self, x):
+        """Delegate the forward pass to the wrapped predictor.
+
+        Args:
+            x: Input CSI tensor.
+
+        Returns:
+            Model prediction for the next CSI steps.
+
+        """
         x = self.model(x)
         return x
 

@@ -170,14 +170,18 @@ def create_scenario_table_ds(
         for ds in regular_ds:
             display_name = _format_delay_spread_ns(ds)
             row_data[f"{display_name} (Regular)"] = (
-                f"{table.loc[model, ds]:.3f}" if not pd.isna(table.loc[model, ds]) else "N/A"  # type: ignore the pandas isna
+                f"{table.loc[model, ds]:.3f}"
+                if not pd.isna(table.loc[model, ds])
+                else "N/A"
             )
 
         # Add generalization delay spread performance
         for ds in generalization_ds:
             display_name = _format_delay_spread_ns(ds)
             row_data[f"{display_name} (Generalization)"] = (
-                f"{table.loc[model, ds]:.3f}" if not pd.isna(table.loc[model, ds]) else "N/A"  # type: ignore the pandas isna
+                f"{table.loc[model, ds]:.3f}"
+                if not pd.isna(table.loc[model, ds])
+                else "N/A"
             )
 
         # Add averages

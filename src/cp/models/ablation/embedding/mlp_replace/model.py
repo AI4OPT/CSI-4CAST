@@ -7,6 +7,8 @@ from src.cp.models.common.dataembedding import DataEmbedding
 
 
 class MLPEmbedding(nn.Module):
+    """MLP-based embedding replacing ShuffleNet for ablation."""
+
     def __init__(
         self,
         dim_model: int,
@@ -19,6 +21,7 @@ class MLPEmbedding(nn.Module):
         hidden_dim: int = 512,
         mlp_dropout: float = 0.1,
     ):
+        """Initialize delay and frequency MLP branches."""
         super().__init__()
 
         # dim notation used in this module:
@@ -47,6 +50,7 @@ class MLPEmbedding(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x_delay, x_freq):
+        """Embed delay and frequency inputs through MLP branches."""
         # x_delay, x_freq: [B, L, D]
         x_delay = self.delay_branch(x_delay)  # [B, L, D]
         x_freq = self.freq_branch(x_freq)  # [B, L, D]
@@ -58,6 +62,8 @@ class MLPEmbedding(nn.Module):
 
 
 class Model(AblationTDDModel):
+    """TDD ablation model with MLP embedding."""
+
     def _build_embedding(self) -> nn.Module:
         p = self._p
         return MLPEmbedding(
@@ -74,5 +80,7 @@ class Model(AblationTDDModel):
 
 
 class MLP_REPLACE_EMBED_TDD(AblationLightningModel):
+    """Ablation: TDD model with MLP-replaced embedding."""
+
     model_class = Model
     model_display_name = "MLP_REPLACE_EMBED"

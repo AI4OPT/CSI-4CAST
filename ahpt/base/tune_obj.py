@@ -27,6 +27,7 @@ class BaseTuningObjective(ABC):
     """Abstract base class for tuning objective functions."""
 
     def __init__(self, tuning_config, temp_dir: Path, worker_id: int = 1):
+        """Initialize the objective with tuning config and worker directory."""
         self.tuning_config = tuning_config
         self.worker_id = worker_id
         self.temp_dir = temp_dir
@@ -45,7 +46,7 @@ class BaseTuningObjective(ABC):
 
     @abstractmethod
     def _setup_base_config(self) -> Any:
-        """Setup base configuration for this tuning objective.
+        """Set up the base configuration for this tuning objective.
 
         This method should be implemented by subclasses to:
         - Load the base config from file or create it programmatically
@@ -55,7 +56,7 @@ class BaseTuningObjective(ABC):
 
     @abstractmethod
     def _setup_hyperparameter_space(self) -> BaseHyperparameterSpace:
-        """Setup hyperparameter space for this tuning objective.
+        """Set up the hyperparameter space for this tuning objective.
 
         This method should be implemented by subclasses to:
         - Import and instantiate the appropriate hyperparameter space class
@@ -65,7 +66,7 @@ class BaseTuningObjective(ABC):
 
     @abstractmethod
     def _setup_data_module(self, data_cfg: Any) -> Any:
-        """Setup data module for training.
+        """Set up the data module for training.
 
         This method should be implemented by subclasses to:
         - Create and initialize the data module with the given config
@@ -301,12 +302,12 @@ class BaseTuningObjective(ABC):
             raise ValueError("Seed not found in config")
 
         # Save the trial-specific config
-        if hasattr(config, "saveYaml"):
+        if hasattr(config, "save_yaml"):
             trial_config_path = temp_output_dir / "config.yaml"
-            config.saveYaml(str(trial_config_path))
+            config.save_yaml(str(trial_config_path))
             self._safe_set_trial_attr(trial, "config_path", str(trial_config_path))
         else:
-            raise ValueError("saveYaml method not found in config")
+            raise ValueError("save_yaml method not found in config")
 
         print(f"🎲 Trial {self.trial_count} using time-based random seed: {trial_seed}")
 

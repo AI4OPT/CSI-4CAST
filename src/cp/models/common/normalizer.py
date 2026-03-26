@@ -1,3 +1,5 @@
+"""Batch normalization utilities for CSI tensors."""
+
 import torch
 
 
@@ -23,5 +25,5 @@ def batch_normalizer(x: torch.Tensor, eps: float = 1e-6):
 
 
 def batch_denormalize(x_norm: torch.Tensor, mean: torch.Tensor, std: torch.Tensor) -> torch.Tensor:
-    """Reverse the standardization: x = x_norm * std + mean"""
+    """Reverse the batch-wise standardization."""
     return x_norm * std + mean

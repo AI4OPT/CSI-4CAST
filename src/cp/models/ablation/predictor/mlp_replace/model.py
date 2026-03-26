@@ -13,6 +13,8 @@ from src.cp.models.common.mlp import MLP
 
 
 class Model(AblationTDDModel):
+    """TDD ablation model with MLP predictor."""
+
     def _build_transformer(self) -> nn.Module:
         p = self._p
         return MLP(
@@ -25,5 +27,7 @@ class Model(AblationTDDModel):
 
 
 class MLP_REPLACE_PRED_TDD(AblationLightningModel):
+    """Ablation: TDD model with MLP-replaced predictor."""
+
     model_class = Model
     model_display_name = "MLP_REPLACE_PRED"

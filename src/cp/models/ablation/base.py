@@ -119,6 +119,7 @@ class AblationLightningModel(BaseCSIModel):
     model_display_name = "ABLATION"
 
     def __init__(self, config: ExperimentConfig, *args, **kwargs):
+        """Initialize the ablation model from an experiment config."""
         super().__init__(
             optimizer_config=config.optimizer,
             scheduler_config=config.scheduler,
@@ -136,9 +137,11 @@ class AblationLightningModel(BaseCSIModel):
         self.model = self.model_class(**model_params)
 
     def __str__(self):
+        """Return the model display name."""
         return self.name
 
     def forward(self, x):
+        """Run the forward pass through the underlying model."""
         return self.model(x)
 
 
@@ -150,6 +153,7 @@ class AblationHyperparameterSpace(BaseHyperparameterSpace):
 
     @staticmethod
     def suggest_optimizer_params(trial: optuna.Trial, optimizer_name: str) -> dict[str, Any]:
+        """Suggest optimizer hyperparameters for the given optimizer."""
         params: dict[str, Any] = {}
         if optimizer_name in ("Adam", "AdamW"):
             params["lr"] = trial.suggest_float("optimizer_lr", 1e-5, 5e-3, log=True)
@@ -158,6 +162,7 @@ class AblationHyperparameterSpace(BaseHyperparameterSpace):
 
     @staticmethod
     def suggest_scheduler_params(trial: optuna.Trial, scheduler_name: str) -> dict[str, Any]:
+        """Suggest scheduler hyperparameters for the given scheduler."""
         params: dict[str, Any] = {}
         if scheduler_name == "ReduceLROnPlateau":
             params["mode"] = "min"
@@ -170,6 +175,7 @@ class AblationHyperparameterSpace(BaseHyperparameterSpace):
 
     @staticmethod
     def suggest_training_params(trial: optuna.Trial) -> dict[str, Any]:
+        """Suggest training hyperparameters such as batch size."""
         return {
             "batch_size": trial.suggest_categorical("batch_size", [16]),
             "accumulate_grad_batches": trial.suggest_categorical("accumulate_grad_batches", [1]),
@@ -177,14 +183,17 @@ class AblationHyperparameterSpace(BaseHyperparameterSpace):
 
     @staticmethod
     def suggest_optimizer_name(trial: optuna.Trial) -> str:
+        """Suggest an optimizer name from the candidate list."""
         return trial.suggest_categorical("optimizer_name", ["Adam", "AdamW"])
 
     @staticmethod
     def suggest_scheduler_name(trial: optuna.Trial) -> str:
+        """Suggest a scheduler name from the candidate list."""
         return trial.suggest_categorical("scheduler_name", ["ReduceLROnPlateau"])
 
     @staticmethod
     def suggest_loss_name(trial: optuna.Trial) -> str:
+        """Suggest a loss function name from the candidate list."""
         return trial.suggest_categorical("loss_name", ["NMSE"])
 
 
@@ -199,6 +208,7 @@ class AblationTDDModel(nn.Module):
     """
 
     def __init__(self, **params):
+        """Build the TDD pipeline from keyword parameters."""
         super().__init__()
         self._p = params
         self.hist_len = params.get("hist_len", 16)
@@ -287,6 +297,7 @@ class AblationTDDModel(nn.Module):
     # -- forward ---------------------------------------------------------------
 
     def forward(self, x):
+        """Run the full TDD prediction pipeline."""
         x = self.denoiser(x)
         x, mean, std = batch_normalizer(x)
         x_delay, x_freq = self.arl(x)
@@ -304,6 +315,7 @@ class AblationFDDModel(nn.Module):
     """Composable FDD model for ablation studies."""
 
     def __init__(self, **params):
+        """Build the FDD pipeline from keyword parameters."""
         super().__init__()
         self._p = params
         self.hist_len = params.get("hist_len", 16)
@@ -388,6 +400,7 @@ class AblationFDDModel(nn.Module):
         )
 
     def forward(self, x):
+        """Run the full FDD prediction pipeline."""
         x = self.denoiser(x)
         x, mean, std = batch_normalizer(x)
         x_delay, x_freq = self.arl(x)

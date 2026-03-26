@@ -14,13 +14,14 @@ from src.cp.tune.tune_runner import CPTuningRunner
 
 
 def main():
+    """Parse arguments and run a single tuning worker."""
     parser = argparse.ArgumentParser(description="CP tuning worker")
     parser.add_argument("--config", required=True, help="Tuning YAML")
     parser.add_argument("--worker_id", type=int, default=1)
     parser.add_argument("--timestamp", type=str, default=None, help="Shared timestamp for this job array")
     args = parser.parse_args()
 
-    config = TuningConfig.fromYaml(args.config)
+    config = TuningConfig.from_yaml(args.config)
 
     output_dir = Path(config.output_dir)
     if args.timestamp:

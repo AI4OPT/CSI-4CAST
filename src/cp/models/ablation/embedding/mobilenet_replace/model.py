@@ -8,7 +8,10 @@ from src.cp.models.common.dataembedding import DataEmbedding
 
 
 class SqueezeExcitation(nn.Module):
+    """Squeeze-and-excitation channel attention block."""
+
     def __init__(self, in_channels: int, squeeze_ratio: int = 4):
+        """Initialize squeeze-excitation layers."""
         super().__init__()
         squeeze_channels = max(1, in_channels // max(1, squeeze_ratio))
         self.avg_pool = nn.AdaptiveAvgPool2d(1)
@@ -18,6 +21,7 @@ class SqueezeExcitation(nn.Module):
         self.act2 = nn.Hardsigmoid(inplace=True)
 
     def forward(self, x):
+        """Apply channel attention via squeeze-excitation."""
         scale = self.avg_pool(x)
         scale = self.fc1(scale)
         scale = self.act1(scale)
@@ -27,6 +31,8 @@ class SqueezeExcitation(nn.Module):
 
 
 class MobileNetV3InvertedResidual(nn.Module):
+    """MobileNetV3-style inverted residual block."""
+
     def __init__(
         self,
         in_channels: int,
@@ -38,6 +44,7 @@ class MobileNetV3InvertedResidual(nn.Module):
         use_hs: bool = True,
         se_ratio: int = 4,
     ):
+        """Initialize the inverted residual block."""
         super().__init__()
         if stride not in (1, 2):
             raise ValueError("stride must be 1 or 2")
@@ -86,6 +93,7 @@ class MobileNetV3InvertedResidual(nn.Module):
         self.use_res_connect = stride == 1 and in_channels == out_channels
 
     def forward(self, x):
+        """Run the inverted residual forward pass."""
         out = self.block(x)
         if self.use_res_connect:
             out = out + x
@@ -93,7 +101,10 @@ class MobileNetV3InvertedResidual(nn.Module):
 
 
 class MobileNetStem(nn.Module):
+    """Initial convolution stem for MobileNet embedding."""
+
     def __init__(self, out_channels: int, use_hs: bool = True):
+        """Initialize the convolution stem."""
         super().__init__()
         activation = nn.Hardswish if use_hs else nn.ReLU
         self.layers = nn.Sequential(
@@ -103,10 +114,13 @@ class MobileNetStem(nn.Module):
         )
 
     def forward(self, x):
+        """Run input through the stem layers."""
         return self.layers(x)
 
 
 class MobileNetEmbedding(nn.Module):
+    """MobileNet-based embedding replacing ShuffleNet for ablation."""
+
     def __init__(
         self,
         dim_model: int,
@@ -123,6 +137,7 @@ class MobileNetEmbedding(nn.Module):
         use_hs: bool = True,
         se_ratio: int = 4,
     ):
+        """Initialize delay and frequency MobileNet branches."""
         super().__init__()
 
         self.delay_branch = self._build_branch(
@@ -176,6 +191,7 @@ class MobileNetEmbedding(nn.Module):
         return nn.Sequential(*layers)
 
     def forward(self, x_delay, x_freq):
+        """Embed delay and frequency inputs through MobileNet branches."""
         x_delay = rearrange(x_delay, "b l (k o) -> b o l k", o=2)
         x_delay = self.delay_branch(x_delay)
 
@@ -190,6 +206,8 @@ class MobileNetEmbedding(nn.Module):
 
 
 class Model(AblationTDDModel):
+    """TDD ablation model with MobileNet embedding."""
+
     def _build_embedding(self) -> nn.Module:
         p = self._p
         return MobileNetEmbedding(
@@ -210,5 +228,7 @@ class Model(AblationTDDModel):
 
 
 class MOBILENET_REPLACE_EMBED_TDD(AblationLightningModel):
+    """Ablation: TDD model with MobileNet-replaced embedding."""
+
     model_class = Model
     model_display_name = "MOBILENET_REPLACE_EMBED"

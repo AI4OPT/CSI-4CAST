@@ -11,6 +11,7 @@ class PassThroughARL(nn.Module):
     """Only perform frequency/delay data shaping, with no learnable layers."""
 
     def forward(self, x):
+        """Pass input through frequency/delay shaping only."""
         x_complex = real_flat_to_complex(x)
         x_delay = torch.fft.ifft(x_complex, dim=2)
         x_delay = complex_to_real_flat(x_delay)
@@ -20,10 +21,14 @@ class PassThroughARL(nn.Module):
 
 
 class Model(AblationFDDModel):
+    """FDD ablation model without ARL."""
+
     def _build_arl(self) -> nn.Module:
         return PassThroughARL()
 
 
 class NO_ARL_FDD(AblationLightningModel):
+    """Ablation: FDD model without ARL."""
+
     model_class = Model
     model_display_name = "NO_ARL"

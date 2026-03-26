@@ -232,7 +232,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Generate CSI dataset")
     parser.add_argument("--is_train", action="store_true", help="Generate training dataset")
     parser.add_argument("--is_gen", action="store_true", help="Generate testing dataset for generalization")
-    parser.add_argument("--debug", action="store_true", help="Debug mode: use small batch size and sample counts for quick testing")
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Debug mode: use small batch size and sample counts for quick testing",
+    )
     args = parser.parse_args()
 
     # Set parameters based on debug mode
