@@ -194,9 +194,21 @@ python3 -m src.data.generator --debug                 # Debug mode: minimal test
 python3 -m src.data.generator --debug --is_gen        # Debug mode: minimal generalization data
 ```
 
+#### Using Pre-Generated Datasets
+
+All datasets used in the paper are publicly available on our [Hugging Face organization](https://huggingface.co/CSI-4CAST). You can download them individually or in bulk using the provided helper scripts:
+
+```bash
+python3 z_artifacts/data/download.py              # Download all datasets from Hugging Face
+python3 z_artifacts/data/reconstruction.py \       # Reconstruct the original folder structure
+    --input-dir datasets --output-dir z_artifacts/data
+```
+
+See [`z_artifacts/data/info.md`](z_artifacts/data/info.md) for detailed download instructions, dataset naming conventions, and the expected directory layout.
+
 #### Obtain Normalization Stats
 
-After data generation, compute normalization statistics using [`src/utils/norm_utils.py`](src/utils/norm_utils.py):
+After data generation (or downloading), compute normalization statistics using [`src/utils/norm_utils.py`](src/utils/norm_utils.py):
 
 ```bash
 python3 -m src.utils.norm_utils
