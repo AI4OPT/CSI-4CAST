@@ -9,6 +9,12 @@ scripts/outs/*
 scripts/*.slurm
 update_plan.md
 
+z_artifacts/data/stats
+z_artifacts/data/train
+z_artifacts/data/test
+
+outs
+
 **/*.ckpt
 
 # Python

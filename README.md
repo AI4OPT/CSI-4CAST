@@ -1,20 +1,24 @@
 # CSI-4CAST: Channel State Information Forecasting
 
+Copyright 2025 Georgia Institute of Technology
+
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
 [![License](https://img.shields.io/badge/license-Apache--2.0-green.svg)](LICENSE)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 
-CSI-4CAST is a comprehensive framework for generating and evaluating Channel State Information (CSI) prediction models using 3GPP TR 38.901 channel models. The repository provides tools for large-scale dataset generation, model training, and comprehensive evaluation with support for both high-performance computing environments ([Phoenix HPC](https://pace.gatech.edu/phoenix-cluster/)) and direct execution on local machines.
+CSI-4CAST is a comprehensive framework for generating and evaluating Channel State Information (CSI) prediction models using 3GPP TR 38.901 channel models. The repository provides tools for large-scale dataset generation, model training, and comprehensive evaluation with support for high-performance computing environments (SLURM-based clusters) and local machines.
 
 This framework is developed as part of our research paper [**CSI-4CAST: A Hybrid Deep Learning Model for CSI Prediction with Comprehensive Robustness and Generalization Testing**](https://arxiv.org/abs/2510.12996). (A BibTeX entry for citation is provided at the end of this page.) The corresponding datasets are publicly available on our [Hugging Face organization](https://huggingface.co/CSI-4CAST).
 
 ## Updates
 
 > [!IMPORTANT]
-> - **Model weights are now public**: all model weights used in the experiments are available in [CSI-4CAST/weights](https://huggingface.co/CSI-4CAST/weights), including the proposed models and the baseline models.
-> - **The tuning workflow is now included**: the reusable tuning infrastructure is in [`ahpt/`](ahpt/) and the CSI prediction tuning entry points are in [`src/cp/tune/`](src/cp/tune/).
+> - **Paper updated**: the latest version of the [paper](https://arxiv.org/abs/2510.12996) includes additional statistical baselines, expanded ablation experiments, and new discussion on the mechanism of each module in the proposed model.
+> - **Model weights are now public**: all model weights (proposed, baselines, and ablation variants) are available at [CSI-4CAST/weights](https://huggingface.co/CSI-4CAST/weights). See [`z_artifacts/weights/info.md`](z_artifacts/weights/info.md) for download instructions and the expected directory structure.
+> - **The tuning workflow is now included**: the reusable tuning infrastructure is in [`ahpt/`](ahpt/) and the CSI prediction tuning entry points are in [`src/cp/tune/`](src/cp/tune/). A sample Optuna study is provided in [`z_artifacts/outputs/ahpt/ablation/predictor/lstm_replace/`](z_artifacts/outputs/ahpt/ablation/predictor/lstm_replace/).
 > - **All ablation models are included**: the ablation study implementations are available under [`src/cp/models/ablation/`](src/cp/models/ablation/).
-> - **All baselines are included**: the repository now contains statistical baselines in [`src/cp/models/baseline/statistical/`](src/cp/models/baseline/statistical/) and learning-based baselines in [`src/cp/models/baseline/learning/`](src/cp/models/baseline/learning/), together with the no-prediction baseline in [`src/cp/models/baseline/np.py`](src/cp/models/baseline/np.py).
+> - **All baselines are included**: statistical baselines in [`src/cp/models/baseline/statistical/`](src/cp/models/baseline/statistical/), learning-based baselines in [`src/cp/models/baseline/learning/`](src/cp/models/baseline/learning/), and the no-prediction baseline in [`src/cp/models/baseline/np.py`](src/cp/models/baseline/np.py).
+> - **Full experiment artifacts provided**: [`z_artifacts/outputs/testing/`](z_artifacts/outputs/testing/) now contains complete results for all 9 models across both FDD and TDD scenarios, including computational overhead profiling, prediction performance for every test setting, consolidated analysis (NMSE & SE rankings), and a full visualization suite (line plots, radar charts, violin plots, and performance tables).
 
 ## Repository Structure
 
@@ -150,7 +154,7 @@ The testing module provides comprehensive evaluation frameworks for CSI predicti
 
 ## Usage Guide
 
-The CSI-4CAST framework is designed to be flexible and compatible with various computing environments, from local development machines to large-scale HPC clusters.
+The CSI-4CAST framework is designed to be flexible. Data generation, model training, noise calibration, results processing, and visualization all run locally. Prediction performance testing is designed for SLURM-based HPC clusters but can also be run locally by setting the `SLURM_ARRAY_TASK_ID` environment variable.
 
 ### Environment Setup
 
@@ -305,14 +309,42 @@ Results saved in `z_artifacts/outputs/testing/computational_overhead/[date_time]
 
 #### Prediction Performance Testing
 
-For HPC clusters using SLURM array jobs, use [`scripts/testing.sh`](scripts/testing.sh) with array size matching `JOBS_PER_MODEL` in [`src/testing/config.py`](src/testing/config.py).
+First, view the testing settings and SLURM array ID mapping:
 
-For local execution:
 ```bash
-python3 -m src.testing.prediction_performance.main --model [model_name]
+python3 -m src.testing.config
 ```
 
-Results saved in `z_artifacts/outputs/testing/prediction_performance/[model_name]/[full_test/slice_i]/[date_time]/`.
+This prints a table showing each model/scenario/test-type combination with its SLURM array range:
+
+```
+Line  Model    Scenario  Test Type       Jobs  Array Range  Combos  Combos/Job
+------------------------------------------------------------------------------
+   0  PAD      TDD       regular            1  1-1             162       162.0
+   1  PAD      TDD       robustness         3  2-4             486       162.0
+   2  PAD      TDD       generalization    19  5-23           3060       161.1
+   3  AR       TDD       regular            1  24-24           162       162.0
+   ...
+  45  WIENER   TDD       regular            1  346-346         162       162.0
+  46  WIENER   TDD       robustness         3  347-349         486       162.0
+  47  WIENER   TDD       generalization    19  350-368        3060       161.1
+```
+
+For HPC clusters, submit the desired models using the array range from the table:
+
+```bash
+sbatch --array=1-23 scripts/testing.sh      # Run all PAD tests
+sbatch --array=162-184 scripts/testing.sh   # Run all MODEL TDD tests
+sbatch --array=1-368 scripts/testing.sh     # Run everything
+```
+
+For local execution, set the `SLURM_ARRAY_TASK_ID` environment variable to the desired array ID from the table:
+
+```bash
+SLURM_ARRAY_TASK_ID=139 python3 -m src.testing.prediction_performance.main   # Run MODEL FDD regular
+```
+
+Results saved in `z_artifacts/outputs/testing/prediction_performance/[model_name]/[scenario]/[test_type]/[slice_i]/[date_time]/`.
 
 #### Results Processing
 
@@ -326,6 +358,24 @@ This performs three steps:
 1. Check completion status of testing models
 2. Gather and aggregate all results into CSV files
 3. Post-process results for scenario-wise distributions based on NMSE and SE metrics
+
+Example output from the completion check:
+
+```
+PER-MODEL SUMMARY:
+------------------------------------------------------------
+  AR          3/3 settings done   (3708/3708 rows)
+  CNN         6/6 settings done   (7416/7416 rows)
+  LLM4CP      6/6 settings done   (7416/7416 rows)
+  MODEL       6/6 settings done   (7416/7416 rows)
+  NP          6/6 settings done   (7416/7416 rows)
+  PAD         3/3 settings done   (3708/3708 rows)
+  RNN         6/6 settings done   (7416/7416 rows)
+  STEMGNN     6/6 settings done   (7416/7416 rows)
+  WIENER      6/6 settings done   (7416/7416 rows)
+
+All complete: True
+```
 
 Results saved in:
 - `z_artifacts/outputs/testing/results/completion_reports/[date_time]/`
@@ -345,68 +395,82 @@ Results saved in `z_artifacts/outputs/testing/vis/[date_time]/[line/radar/violin
 
 ## Sample Outputs
 
-To better illustrate the usage of the framework, sample outputs are provided in the [`z_artifacts/`](z_artifacts/) directory. These examples demonstrate the complete workflow from configuration to final visualization results.
+The [`z_artifacts/`](z_artifacts/) directory ships with sample outputs that demonstrate the complete workflow — from configuration through training, tuning, testing all 9 models, to final visualization. The tree below summarizes what is included.
 
 ### Configuration Files
 
-- **[`config/cp/rnn/`](z_artifacts/config/cp/rnn/)**: Sample configuration files for RNN model training
-  - [`fdd_rnn.yaml`](z_artifacts/config/cp/rnn/fdd_rnn.yaml): FDD scenario RNN configuration
-  - [`tdd_rnn.yaml`](z_artifacts/config/cp/rnn/tdd_rnn.yaml): TDD scenario RNN configuration
-
-### Noise Calibration Results
-
-- **[`noise/noise_degree/`](z_artifacts/outputs/noise/noise_degree/)**: Noise parameter calibration outputs
-  - [`decide_nd.json`](z_artifacts/outputs/noise/noise_degree/20250928_155913/decide_nd.json): Calibrated noise degree mappings for different noise types
-  - [`snr.csv`](z_artifacts/outputs/noise/noise_degree/20250928_155913/snr.csv): SNR measurement results across noise parameters
+- **[`config/cp/rnn/tdd_rnn.yaml`](z_artifacts/config/cp/rnn/tdd_rnn.yaml)**: Sample training configuration for the RNN model under the TDD scenario
 
 ### Model Training Results
 
-- **[`TDD/RNN/`](z_artifacts/outputs/TDD/RNN/)**: Sample training output for RNN model in TDD scenario
-  - [`config_copy.yaml`](z_artifacts/outputs/TDD/RNN/2025-09-28_15-07-23/config_copy.yaml): Training configuration backup
-  - [`tb_logs/`](z_artifacts/outputs/TDD/RNN/2025-09-28_15-07-23/tb_logs/): TensorBoard logs for training monitoring
+- **[`outputs/TDD/RNN/`](z_artifacts/outputs/TDD/RNN/)**: Sample training run for the RNN model in the TDD scenario
+  - `config_copy.yaml` — snapshot of the training configuration used
+  - `result.log` — full training log (data loading, epoch progress, validation loss)
+  - `ckpts/` — model checkpoints (best validation + last epoch)
+  - `tb_logs/` — TensorBoard event files for monitoring loss curves
 
-### Testing Performance Results
+### Hyperparameter Tuning Results
 
-The [`testing/`](z_artifacts/outputs/testing/) directory contains comprehensive evaluation results for both NP baseline and RNN models:
+- **[`outputs/ahpt/ablation/predictor/lstm_replace/`](z_artifacts/outputs/ahpt/ablation/predictor/lstm_replace/)**: Sample Optuna study database (`study.db`) for the LSTM-replace ablation, viewable via `src.cp.tune.monitor`
 
-#### Raw Testing Data
-- **[`computational_overhead/`](z_artifacts/outputs/testing/computational_overhead/)**: Performance profiling results
-  - [`computational_overhead.csv`](z_artifacts/outputs/testing/computational_overhead/20250928_164946/computational_overhead.csv): FLOPs, inference time, and parameter counts
+### Testing Results
 
-- **[`prediction_performance/`](z_artifacts/outputs/testing/prediction_performance/)**: Prediction accuracy results
-  - **[`NP/full_test/`](z_artifacts/outputs/testing/prediction_performance/NP/full_test/)**: NP baseline results obtained via local execution mode
-  - **[`RNN/slice_*/`](z_artifacts/outputs/testing/prediction_performance/RNN/)**: RNN results obtained via SLURM job slices (20 parallel jobs)
+The [`outputs/testing/`](z_artifacts/outputs/testing/) directory contains the full evaluation pipeline outputs for all 9 models (AR, CNN, LLM4CP, MODEL, NP, PAD, RNN, STEMGNN, WIENER) across both FDD and TDD scenarios.
+
+#### Computational Overhead
+
+- **[`computational_overhead/`](z_artifacts/outputs/testing/computational_overhead/)**: Profiling results for every model
+  - [`computational_overhead.csv`](z_artifacts/outputs/testing/computational_overhead/20260308_191139/computational_overhead.csv) — FLOPs, inference/training time, parameter counts, GPU memory, and energy consumption
+
+#### Prediction Performance
+
+- **[`prediction_performance/`](z_artifacts/outputs/testing/prediction_performance/)**: Per-model, per-scenario raw results organized as `{Model}/{Scenario}/{TestType}/slice_{i}/{timestamp}/result.csv`
+
+  | Model | Scenarios | Test Types |
+  |-------|-----------|------------|
+  | AR | TDD | regular, robustness, generalization |
+  | CNN | FDD, TDD | regular, robustness, generalization |
+  | LLM4CP | FDD, TDD | regular, robustness, generalization |
+  | MODEL | FDD, TDD | regular, robustness, generalization |
+  | NP | FDD, TDD | regular, robustness, generalization |
+  | PAD | TDD | regular, robustness, generalization |
+  | RNN | FDD, TDD | regular, robustness, generalization |
+  | STEMGNN | FDD, TDD | regular, robustness, generalization |
+  | WIENER | FDD, TDD | regular, robustness, generalization |
 
 #### Processed Analysis Results
-- **[`results/`](z_artifacts/outputs/testing/results/)**: Consolidated and analyzed testing data
-  - [`completion_reports/`](z_artifacts/outputs/testing/results/completion_reports/): Testing completion status verification
-  - [`gather/`](z_artifacts/outputs/testing/results/gather/): Consolidated raw results from all models and slices
-  - [`analysis/`](z_artifacts/outputs/testing/results/analysis/): Statistical analysis with rankings and distributions
-    - [`nmse/`](z_artifacts/outputs/testing/results/analysis/nmse/): NMSE-based performance analysis
-    - [`se/`](z_artifacts/outputs/testing/results/analysis/se/): Spectral efficiency-based performance analysis
+
+- **[`results/`](z_artifacts/outputs/testing/results/)**: Consolidated and analyzed data from all models
+  - [`completion_reports/`](z_artifacts/outputs/testing/results/completion_reports/) — per-model completion status verification (`completion_status.csv`)
+  - [`gather/`](z_artifacts/outputs/testing/results/gather/) — single `consolidated_results.csv` merging all models and slices
+  - [`analysis/`](z_artifacts/outputs/testing/results/analysis/) — statistical ranking and distribution analysis
+    - [`nmse/`](z_artifacts/outputs/testing/results/analysis/nmse/) — NMSE-based pivot tables, rankings, and rank distributions
+    - [`se/`](z_artifacts/outputs/testing/results/analysis/se/) — Spectral efficiency-based pivot tables, rankings, and rank distributions
 
 #### Visualization Results
-- **[`vis/`](z_artifacts/outputs/testing/vis/)**: Comprehensive visualization suite
-  - [`line/`](z_artifacts/outputs/testing/vis/20250928_194940/line/): Line plots showing performance across different conditions
-    - [`generalization/`](z_artifacts/outputs/testing/vis/20250928_194940/line/generalization/): Out-of-distribution performance
-    - [`regular/`](z_artifacts/outputs/testing/vis/20250928_194940/line/regular/): In-distribution performance  
-    - [`robustness/`](z_artifacts/outputs/testing/vis/20250928_194940/line/robustness/): Performance under noise conditions
-  - [`radar/`](z_artifacts/outputs/testing/vis/20250928_194940/radar/): Multi-dimensional performance comparison
-    - [`combined_radar_fdd.pdf`](z_artifacts/outputs/testing/vis/20250928_194940/radar/combined_radar_fdd.pdf): FDD scenario radar plot
-    - [`combined_radar_tdd.pdf`](z_artifacts/outputs/testing/vis/20250928_194940/radar/combined_radar_tdd.pdf): TDD scenario radar plot
-  - [`table/`](z_artifacts/outputs/testing/vis/20250928_194940/table/): Performance summary tables by channel model and delay spread
-  - [`violin/`](z_artifacts/outputs/testing/vis/20250928_194940/violin/): Distribution analysis across scenarios
+
+- **[`vis/`](z_artifacts/outputs/testing/vis/)**: Comprehensive visualization suite covering all models and both scenarios
+
+  | Type | Path | Description |
+  |------|------|-------------|
+  | **Line plots** | `line/regular/` | NMSE and SE vs. noise degree for in-distribution performance (FDD & TDD) |
+  | | `line/robustness/` | Performance under burst, package-drop, and phase-noise conditions |
+  | | `line/generalization/` | Out-of-distribution performance across mobility scenarios |
+  | **Radar plots** | `radar/` | Multi-dimensional ranking comparison (`combined_radar_fdd.pdf`, `combined_radar_tdd.pdf`) with rank summary CSVs |
+  | **Violin plots** | `violin/nmse/`, `violin/se/` | Distribution of NMSE and SE across regular, robustness, and generalization scenarios for FDD and TDD |
+  | **Tables** | `table/nmse_cm/`, `table/nmse_ds/` | NMSE performance tables broken down by channel model and delay spread (formatted CSVs + text summaries) |
+  | | `table/se_cm/`, `table/se_ds/` | SE performance tables broken down by channel model and delay spread |
 
 ### Key Insights from Sample Results
 
 The provided sample outputs demonstrate:
-- **Execution Modes**: NP baseline uses local full_test mode while RNN uses distributed SLURM slices. The current testing framework supports both modes.
-- **Comprehensive Evaluation**: Testing covers regular, robustness, and generalization scenarios.
-- **Multi-Metric Analysis**: Both NMSE and spectral efficiency (SE) metrics are evaluated.
-- **Rich Visualizations**: Multiple plot types provide different perspectives on model performance.
-- **Scalable Framework**: The structure supports easy extension to additional models and scenarios.
+- **Full Model Coverage**: All 9 models (5 learning-based, 3 statistical, 1 no-prediction baseline) are evaluated.
+- **Comprehensive Evaluation**: Testing covers regular, robustness (burst / package-drop / phase noise), and generalization scenarios across both FDD and TDD.
+- **Multi-Metric Analysis**: Both NMSE and spectral efficiency (SE) metrics are evaluated with per-condition pivot tables and global rankings.
+- **Rich Visualizations**: Line plots, radar charts, violin plots, and performance tables provide complementary perspectives.
+- **End-to-End Pipeline**: From configuration to training logs, tuning studies, raw predictions, consolidated analysis, and publication-ready figures.
 
-**For more comprehensive results and detailed analysis, please refer to the corresponding research paper.**
+**For detailed analysis and interpretation, please refer to the corresponding research paper.**
 
 
 ## Citation
