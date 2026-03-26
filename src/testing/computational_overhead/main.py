@@ -34,27 +34,8 @@ from src.testing.computational_overhead.utils import (
 from src.testing.config import CPU_ONLY_MODELS
 
 
-TDD_MODELS = [
-    "AR",
-    "CNN",
-    "LLM4CP",
-    "MODEL",
-    "NP",
-    "PAD",
-    "RNN",
-    "STEMGNN",
-    "WIENER",
-    "ABL_NO_DENOISER",
-    "ABL_NO_IDFT",
-    "ABL_NO_ARL",
-    "ABL_NORM_REPLACE_ARL",
-    "ABL_ADD_SUBCARRIER_ARL",
-    "ABL_MLP_REPLACE_EMBED",
-    "ABL_MOBILENET_REPLACE_EMBED",
-    "ABL_MLP_REPLACE_PRED",
-    "ABL_LSTM_REPLACE_PRED",
-]
-FDD_MODELS = ["CNN", "LLM4CP", "MODEL", "NP", "RNN", "STEMGNN", "WIENER", "ABL_NO_ARL", "ABL_NO_SUBCARRIER_ARL"]
+TDD_MODELS = ["AR", "CNN", "LLM4CP", "MODEL", "NP", "PAD", "RNN", "STEMGNN", "WIENER"]
+FDD_MODELS = ["CNN", "LLM4CP", "MODEL", "NP", "RNN", "STEMGNN", "WIENER"]
 
 WARMUP_ITERATIONS = 50
 MEASURE_ITERATIONS = 100
