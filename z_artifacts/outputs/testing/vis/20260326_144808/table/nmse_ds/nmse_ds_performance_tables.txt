@@ -1,0 +1,104 @@
+NMSE DS Performance Analysis
+============================================================
+Generated for nmse_ds analysis:
+  Filtered for delay spread analysis:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in ['30ns', '50ns', '100ns', '200ns', '300ns', '400ns'] - analyzing these
+  - min_speed in [1, 10, 30] (regular)
+  - channel_model in ['A', 'C', 'D'] (regular)
+Columns: 30ns, 100ns, 300ns (Regular) | 50ns, 200ns, 400ns (Generalization)
+Separate tables for TDD and FDD scenarios
+Values NMSE averaged across all matching conditions per model-ds combination
+============================================================
+
+NMSE DS Performance Table - TDD Scenario
+============================================================
+Data: Filtered for delay spread analysis:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in ['30ns', '50ns', '100ns', '200ns', '300ns', '400ns'] - analyzing these
+  - min_speed in [1, 10, 30] (regular)
+  - channel_model in ['A', 'C', 'D'] (regular)
+Columns: 30ns, 100ns, 300ns (Regular) | 50ns, 200ns, 400ns (Generalization)
+Values: Averaged NMSE across all matching conditions
+============================================================
+
+| Model   |   30ns (Regular) |   100ns (Regular) |   300ns (Regular) |   50ns (Generalization) |   200ns (Generalization) |   400ns (Generalization) |   Regular Avg |   Generalization Avg |
+|:--------|-----------------:|------------------:|------------------:|------------------------:|-------------------------:|-------------------------:|--------------:|---------------------:|
+| NP      |            2.247 |             1.714 |             1.526 |                   1.891 |                    1.499 |                    1.466 |         1.829 |                1.619 |
+| AR      |            0.843 |             0.767 |             0.738 |                   0.799 |                    0.733 |                    0.724 |         0.783 |                0.752 |
+| WIENER  |            0.897 |             0.801 |             0.764 |                   0.848 |                    0.762 |                    0.747 |         0.821 |                0.786 |
+| PAD     |            0.369 |             0.215 |             0.154 |                   0.271 |                    0.153 |                    0.148 |         0.246 |                0.19  |
+| CNN     |            0.26  |             0.211 |             0.174 |                   0.23  |                    0.173 |                    0.172 |         0.215 |                0.192 |
+| STEMGNN |            0.253 |             0.23  |             0.212 |                   0.222 |                    0.207 |                    0.214 |         0.232 |                0.214 |
+| RNN     |            0.191 |             0.168 |             0.155 |                   0.177 |                    0.164 |                    0.282 |         0.172 |                0.208 |
+| LLM4CP  |            0.195 |             0.145 |             0.103 |                   0.163 |                    0.111 |                    0.141 |         0.148 |                0.138 |
+| MODEL   |            0.176 |             0.124 |             0.084 |                   0.147 |                    0.119 |                    0.174 |         0.128 |                0.147 |
+
+Model Rankings:
+----------------------------------------
+By Regular Performance (30ns, 100ns, 300ns):
+  1. MODEL: 0.128
+  2. LLM4CP: 0.148
+  3. RNN: 0.172
+  4. CNN: 0.215
+  5. STEMGNN: 0.232
+  6. PAD: 0.246
+  7. AR: 0.783
+  8. WIENER: 0.821
+  9. NP: 1.829
+
+By Generalization Performance (50ns, 200ns, 400ns):
+  1. LLM4CP: 0.138
+  2. MODEL: 0.147
+  3. PAD: 0.190
+  4. CNN: 0.192
+  5. RNN: 0.208
+  6. STEMGNN: 0.214
+  7. AR: 0.752
+  8. WIENER: 0.786
+  9. NP: 1.619
+
+NMSE DS Performance Table - FDD Scenario
+============================================================
+Data: Filtered for delay spread analysis:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in ['30ns', '50ns', '100ns', '200ns', '300ns', '400ns'] - analyzing these
+  - min_speed in [1, 10, 30] (regular)
+  - channel_model in ['A', 'C', 'D'] (regular)
+Columns: 30ns, 100ns, 300ns (Regular) | 50ns, 200ns, 400ns (Generalization)
+Values: Averaged NMSE across all matching conditions
+============================================================
+
+| Model   |   30ns (Regular) |   100ns (Regular) |   300ns (Regular) |   50ns (Generalization) |   200ns (Generalization) |   400ns (Generalization) |   Regular Avg |   Generalization Avg |
+|:--------|-----------------:|------------------:|------------------:|------------------------:|-------------------------:|-------------------------:|--------------:|---------------------:|
+| NP      |            2.8   |             2.92  |             2.488 |                   3.044 |                    2.312 |                    2.025 |         2.736 |                2.461 |
+| WIENER  |            1.104 |             1.022 |             1.036 |                   1.09  |                    1.061 |                    1.014 |         1.054 |                1.055 |
+| CNN     |            0.631 |             0.8   |             0.626 |                   0.744 |                    0.797 |                    0.994 |         0.686 |                0.845 |
+| STEMGNN |            0.493 |             0.597 |             0.522 |                   0.561 |                    0.818 |                    0.894 |         0.537 |                0.758 |
+| RNN     |            0.301 |             0.318 |             0.255 |                   0.426 |                    0.93  |                    1.33  |         0.291 |                0.896 |
+| LLM4CP  |            0.335 |             0.467 |             0.184 |                   0.557 |                    1.005 |                    1.421 |         0.329 |                0.994 |
+| MODEL   |            0.316 |             0.343 |             0.19  |                   0.494 |                    0.975 |                    1.417 |         0.283 |                0.962 |
+
+Model Rankings:
+----------------------------------------
+By Regular Performance (30ns, 100ns, 300ns):
+  1. MODEL: 0.283
+  2. RNN: 0.291
+  3. LLM4CP: 0.329
+  4. STEMGNN: 0.537
+  5. CNN: 0.686
+  6. WIENER: 1.054
+  7. NP: 2.736
+
+By Generalization Performance (50ns, 200ns, 400ns):
+  1. STEMGNN: 0.758
+  2. CNN: 0.845
+  3. RNN: 0.896
+  4. MODEL: 0.962
+  5. LLM4CP: 0.994
+  6. WIENER: 1.055
+  7. NP: 2.461
+

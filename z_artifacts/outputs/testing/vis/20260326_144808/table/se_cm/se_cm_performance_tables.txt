@@ -1,0 +1,104 @@
+SE CM Performance Analysis
+============================================================
+Generated for se_cm analysis:
+  Filtered to match channel model analysis criteria:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 1e-07, 3e-07] (ns)
+  - min_speed in [1, 10, 30]
+  - channel_model in ['A', 'B', 'C', 'D', 'E'] (analyzing these)
+Columns: A, C, D (Regular) | B, E (Generalization)
+Separate tables for TDD and FDD scenarios
+Values SE averaged across all matching conditions per model-cm combination
+============================================================
+
+SE CM Performance Table - TDD Scenario
+============================================================
+Data: Filtered to match channel model analysis criteria:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 1e-07, 3e-07] (ns)
+  - min_speed in [1, 10, 30]
+  - channel_model in ['A', 'B', 'C', 'D', 'E'] (analyzing these)
+Columns: A, C, D (Regular) | B, E (Generalization)
+Values: Averaged SE across all matching conditions
+============================================================
+
+| Model   |   A (Regular) |   C (Regular) |   D (Regular) |   B (Generalization) |   E (Generalization) |   Regular Avg |   Generalization Avg |
+|:--------|--------------:|--------------:|--------------:|---------------------:|---------------------:|--------------:|---------------------:|
+| NP      |         7.72  |         7.504 |         8.011 |                7.297 |                7.995 |         7.745 |                7.646 |
+| AR      |         7.801 |         7.495 |         8.126 |                7.151 |                8.106 |         7.807 |                7.629 |
+| WIENER  |         7.738 |         7.417 |         8.077 |                7.016 |                8.05  |         7.744 |                7.533 |
+| PAD     |         7.971 |         7.938 |         8.214 |                7.603 |                8.203 |         8.041 |                7.903 |
+| CNN     |         7.923 |         7.634 |         8.216 |                7.295 |                8.196 |         7.925 |                7.745 |
+| STEMGNN |         7.891 |         7.617 |         8.237 |                7.26  |                8.22  |         7.915 |                7.74  |
+| RNN     |         7.969 |         7.844 |         8.25  |                7.394 |                8.232 |         8.021 |                7.813 |
+| LLM4CP  |         8.048 |         7.873 |         8.258 |                7.52  |                8.239 |         8.06  |                7.88  |
+| MODEL   |         8.06  |         7.986 |         8.265 |                7.506 |                8.246 |         8.104 |                7.876 |
+
+Model Rankings:
+----------------------------------------
+By Regular Performance (A, C, D):
+  1. MODEL: 8.104
+  2. LLM4CP: 8.060
+  3. PAD: 8.041
+  4. RNN: 8.021
+  5. CNN: 7.925
+  6. STEMGNN: 7.915
+  7. AR: 7.807
+  8. NP: 7.745
+  9. WIENER: 7.744
+
+By Generalization Performance (B, E):
+  1. PAD: 7.903
+  2. LLM4CP: 7.880
+  3. MODEL: 7.876
+  4. RNN: 7.813
+  5. CNN: 7.745
+  6. STEMGNN: 7.740
+  7. NP: 7.646
+  8. AR: 7.629
+  9. WIENER: 7.533
+
+SE CM Performance Table - FDD Scenario
+============================================================
+Data: Filtered to match channel model analysis criteria:
+  - is_gen = True (generalization data only)
+  - noise_type = 'vanilla'
+  - delay_spread in [3e-08, 1e-07, 3e-07] (ns)
+  - min_speed in [1, 10, 30]
+  - channel_model in ['A', 'B', 'C', 'D', 'E'] (analyzing these)
+Columns: A, C, D (Regular) | B, E (Generalization)
+Values: Averaged SE across all matching conditions
+============================================================
+
+| Model   |   A (Regular) |   C (Regular) |   D (Regular) |   B (Generalization) |   E (Generalization) |   Regular Avg |   Generalization Avg |
+|:--------|--------------:|--------------:|--------------:|---------------------:|---------------------:|--------------:|---------------------:|
+| NP      |         7.427 |         6.623 |         7.955 |                5.911 |                7.919 |         7.335 |                6.915 |
+| WIENER  |         6.681 |         6.394 |         7.911 |                5.778 |                7.901 |         6.995 |                6.84  |
+| CNN     |         6.731 |         5.853 |         8.035 |                5.019 |                7.952 |         6.873 |                6.485 |
+| STEMGNN |         7.221 |         6.174 |         8.217 |                5.341 |                8.175 |         7.204 |                6.758 |
+| RNN     |         7.779 |         7.613 |         8.244 |                5.897 |                8.202 |         7.879 |                7.049 |
+| LLM4CP  |         7.753 |         7.667 |         8.245 |                5.747 |                8.189 |         7.888 |                6.968 |
+| MODEL   |         7.822 |         7.677 |         8.253 |                5.769 |                8.202 |         7.917 |                6.986 |
+
+Model Rankings:
+----------------------------------------
+By Regular Performance (A, C, D):
+  1. MODEL: 7.917
+  2. LLM4CP: 7.888
+  3. RNN: 7.879
+  4. NP: 7.335
+  5. STEMGNN: 7.204
+  6. WIENER: 6.995
+  7. CNN: 6.873
+
+By Generalization Performance (B, E):
+  1. RNN: 7.049
+  2. MODEL: 6.986
+  3. LLM4CP: 6.968
+  4. NP: 6.915
+  5. WIENER: 6.840
+  6. STEMGNN: 6.758
+  7. CNN: 6.485
+

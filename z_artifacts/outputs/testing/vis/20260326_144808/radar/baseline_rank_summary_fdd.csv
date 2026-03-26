@@ -1,0 +1,8 @@
+model,display_name,se_generalization_mean_rank,se_regular_mean_rank,se_robustness_mean_rank,se_generalization_p_percentage_1,se_regular_p_percentage_1,se_robustness_p_percentage_1,nmse_generalization_mean_rank,nmse_regular_mean_rank,nmse_robustness_mean_rank,nmse_generalization_p_percentage_1,nmse_regular_p_percentage_1,nmse_robustness_p_percentage_1
+CNN,CNN,6.161,6.284,6.484,0.1,0.0,0.0,3.821,5.068,5.101,22.2,0.0,0.0
+LLM4CP,LLM4CP,3.07,2.185,2.152,12.2,27.8,30.7,3.413,2.204,2.053,14.5,28.4,36.4
+MODEL,CSI-4CAST,2.428,1.617,1.802,32.5,44.4,32.7,3.003,1.617,1.714,24.1,44.4,38.7
+NP,NP,3.826,4.846,4.123,22.0,4.3,11.7,6.886,6.895,6.837,0.2,0.0,0.0
+RNN,RNN,2.62,2.432,2.675,20.5,23.5,24.9,2.666,2.29,2.444,21.4,27.2,24.5
+STEMGNN,StemGNN,4.854,4.809,5.041,3.5,0.0,0.0,3.073,3.944,3.86,11.2,0.0,0.4
+WIENER,Wiener,5.04,5.827,5.722,9.2,0.0,0.0,5.138,5.981,5.99,6.4,0.0,0.0
