@@ -57,17 +57,11 @@ def get_ckpt_path(model_name: str, scenario: str) -> str | None:
     return str(Path(DIR_WEIGHTS) / scenario.lower() / model_name.lower() / "model.ckpt")
 
 
-_PARAM_DIR_OVERRIDES: dict[str, str] = {
-    "AR": "ar_new",
-}
-
-
 def get_param_path(model_name: str, scenario: str) -> str | None:
     """Get parameter file path for statistical baselines."""
     if model_name not in MODELS_WITH_PARAM_FILE:
         return None
-    folder = _PARAM_DIR_OVERRIDES.get(model_name, model_name.lower())
-    return str(Path(DIR_WEIGHTS) / scenario.lower() / folder / "params.npz")
+    return str(Path(DIR_WEIGHTS) / scenario.lower() / model_name.lower() / "params.npz")
 
 
 def _get_eval_model(model_name: str, device: torch.device, scenario: str, ckpt_path: str | None = None):
