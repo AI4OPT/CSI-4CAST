@@ -28,6 +28,11 @@ CSI-4CAST/
 ├── LICENSE                           # License information
 ├── env.yml                           # Conda environment configuration
 ├── pyproject.toml                    # Project configuration and linting rules
+├── asset/                            # Figures and paper PDF for documentation
+│   ├── csi-4cast-Mar-26-2026.pdf
+│   ├── sample_training.png
+│   ├── sample_optuna_1.png
+│   └── sample_optuna_2.png
 ├── ahpt/                             # Reusable hyperparameter tuning utilities
 │   └── base/
 │       ├── config.py                 # Tuning configuration dataclasses
@@ -36,15 +41,13 @@ CSI-4CAST/
 │       ├── tune_runner.py            # Study orchestration utilities
 │       ├── tune_space.py             # Search-space helpers
 │       └── utils.py                  # Shared tuning utilities
-├── scripts/                          # HPC job scripts and templates
+├── scripts/                          # HPC job scripts (SLURM templates)
 │   ├── computational_overhead.sh
-│   ├── cp_template.sh
-│   ├── data_gen_template.sh
+│   ├── cp.sh
+│   ├── data_gen.sh
 │   ├── nd.sh
 │   ├── param_estimation.sh
-│   ├── resync.sh
-│   ├── testing.sh
-│   └── outs/                         # Example job logs
+│   └── testing.sh
 ├── src/                              # Source code
 │   ├── data/                         # Data generation module
 │   ├── cp/                           # Channel prediction and tuning module
@@ -174,7 +177,7 @@ The [`data_utils.py`](src/utils/data_utils.py) file defines all constants which 
 
 #### Generate Data
 
-For high-performance computing, use the template in [`scripts/data_gen_template.sh`](scripts/data_gen_template.sh):
+For high-performance computing, use the template in [`scripts/data_gen.sh`](scripts/data_gen.sh):
 
 ```bash
 python3 -m src.data.generator --is_train              # Generate training data, typical array size is 1-9
@@ -224,12 +227,22 @@ Default output directory: `z_artifacts/config/cp/[model_name]/`
 python3 -m src.cp.main --hparams_csi_pred [config_file]
 ```
 
-For HPC clusters, use [`scripts/cp_template.sh`](scripts/cp_template.sh). Training outputs are saved in `z_artifacts/outputs/[TDD/FDD]/[model_name]/[date_time]/` with checkpoints in `ckpts/` and TensorBoard logs in `tb_logs/`.
+For HPC clusters, use [`scripts/cp.sh`](scripts/cp.sh). Training outputs are saved in `z_artifacts/outputs/[TDD/FDD]/[model_name]/[date_time]/` with checkpoints in `ckpts/` and TensorBoard logs in `tb_logs/`.
 
 View training progress:
 ```bash
 tensorboard --logdir [output_directory]/tb_logs
 ```
+
+#### Sample Training Output
+
+A sample training run is included in [`z_artifacts/outputs/TDD/RNN/`](z_artifacts/outputs/TDD/RNN/) (RNN model, TDD scenario), containing the configuration snapshot (`config_copy.yaml`), full training log (`result.log`), model checkpoints (`ckpts/`), and TensorBoard event files (`tb_logs/`). A sample configuration file is also provided at [`z_artifacts/config/cp/rnn/tdd_rnn.yaml`](z_artifacts/config/cp/rnn/tdd_rnn.yaml).
+
+Below are the TensorBoard training and validation loss curves from this run:
+
+<p align="center">
+  <img src="asset/sample_training.png" width="700" alt="Sample TensorBoard training and validation loss curves for RNN (TDD)">
+</p>
 
 ### 3. Hyperparameter Tuning
 
@@ -280,6 +293,17 @@ python3 -m src.cp.tune.monitor --base-port 9000
 ```
 
 The monitor scans `z_artifacts/outputs/ahpt/ablation/` for `study.db` files, keeps the latest run for each ablation, and serves one dashboard per study on consecutive ports.
+
+#### Sample Tuning Output
+
+A sample Optuna study database is included at [`z_artifacts/outputs/ahpt/ablation/predictor/lstm_replace/`](z_artifacts/outputs/ahpt/ablation/predictor/lstm_replace/). Below are screenshots from the Optuna dashboard showing the optimization history, hyperparameter importance, trial timeline, and intermediate values:
+
+<p align="center">
+  <img src="asset/sample_optuna_1.png" width="700" alt="Optuna dashboard: optimization history, hyperparameter importance, and trial timeline">
+</p>
+<p align="center">
+  <img src="asset/sample_optuna_2.png" width="700" alt="Optuna dashboard: intermediate values across trials">
+</p>
 
 ### 4. Noise Degree Testing
 
@@ -392,39 +416,12 @@ python3 -m src.testing.vis.main
 
 Results saved in `z_artifacts/outputs/testing/vis/[date_time]/[line/radar/violin/table]/`.
 
+#### Included Sample Testing Outputs
 
-## Sample Outputs
+The [`z_artifacts/outputs/testing/`](z_artifacts/outputs/testing/) directory contains complete results for all 9 models (AR, CNN, LLM4CP, MODEL, NP, PAD, RNN, STEMGNN, WIENER) across both FDD and TDD scenarios:
 
-The [`z_artifacts/`](z_artifacts/) directory ships with sample outputs that demonstrate the complete workflow — from configuration through training, tuning, testing all 9 models, to final visualization. The tree below summarizes what is included.
-
-### Configuration Files
-
-- **[`config/cp/rnn/tdd_rnn.yaml`](z_artifacts/config/cp/rnn/tdd_rnn.yaml)**: Sample training configuration for the RNN model under the TDD scenario
-
-### Model Training Results
-
-- **[`outputs/TDD/RNN/`](z_artifacts/outputs/TDD/RNN/)**: Sample training run for the RNN model in the TDD scenario
-  - `config_copy.yaml` — snapshot of the training configuration used
-  - `result.log` — full training log (data loading, epoch progress, validation loss)
-  - `ckpts/` — model checkpoints (best validation + last epoch)
-  - `tb_logs/` — TensorBoard event files for monitoring loss curves
-
-### Hyperparameter Tuning Results
-
-- **[`outputs/ahpt/ablation/predictor/lstm_replace/`](z_artifacts/outputs/ahpt/ablation/predictor/lstm_replace/)**: Sample Optuna study database (`study.db`) for the LSTM-replace ablation, viewable via `src.cp.tune.monitor`
-
-### Testing Results
-
-The [`outputs/testing/`](z_artifacts/outputs/testing/) directory contains the full evaluation pipeline outputs for all 9 models (AR, CNN, LLM4CP, MODEL, NP, PAD, RNN, STEMGNN, WIENER) across both FDD and TDD scenarios.
-
-#### Computational Overhead
-
-- **[`computational_overhead/`](z_artifacts/outputs/testing/computational_overhead/)**: Profiling results for every model
-  - [`computational_overhead.csv`](z_artifacts/outputs/testing/computational_overhead/20260308_191139/computational_overhead.csv) — FLOPs, inference/training time, parameter counts, GPU memory, and energy consumption
-
-#### Prediction Performance
-
-- **[`prediction_performance/`](z_artifacts/outputs/testing/prediction_performance/)**: Per-model, per-scenario raw results organized as `{Model}/{Scenario}/{TestType}/slice_{i}/{timestamp}/result.csv`
+- **[`computational_overhead/`](z_artifacts/outputs/testing/computational_overhead/)** — FLOPs, inference/training time, parameter counts, GPU memory, and energy consumption for every model ([`computational_overhead.csv`](z_artifacts/outputs/testing/computational_overhead/20260308_191139/computational_overhead.csv))
+- **[`prediction_performance/`](z_artifacts/outputs/testing/prediction_performance/)** — per-model, per-scenario raw results organized as `{Model}/{Scenario}/{TestType}/slice_{i}/{timestamp}/result.csv`
 
   | Model | Scenarios | Test Types |
   |-------|-----------|------------|
@@ -438,18 +435,12 @@ The [`outputs/testing/`](z_artifacts/outputs/testing/) directory contains the fu
   | STEMGNN | FDD, TDD | regular, robustness, generalization |
   | WIENER | FDD, TDD | regular, robustness, generalization |
 
-#### Processed Analysis Results
-
-- **[`results/`](z_artifacts/outputs/testing/results/)**: Consolidated and analyzed data from all models
-  - [`completion_reports/`](z_artifacts/outputs/testing/results/completion_reports/) — per-model completion status verification (`completion_status.csv`)
-  - [`gather/`](z_artifacts/outputs/testing/results/gather/) — single `consolidated_results.csv` merging all models and slices
-  - [`analysis/`](z_artifacts/outputs/testing/results/analysis/) — statistical ranking and distribution analysis
-    - [`nmse/`](z_artifacts/outputs/testing/results/analysis/nmse/) — NMSE-based pivot tables, rankings, and rank distributions
-    - [`se/`](z_artifacts/outputs/testing/results/analysis/se/) — Spectral efficiency-based pivot tables, rankings, and rank distributions
-
-#### Visualization Results
-
-- **[`vis/`](z_artifacts/outputs/testing/vis/)**: Comprehensive visualization suite covering all models and both scenarios
+- **[`results/`](z_artifacts/outputs/testing/results/)** — consolidated analysis from all models
+  - `completion_reports/` — per-model completion status (`completion_status.csv`)
+  - `gather/` — single `consolidated_results.csv` merging all models and slices
+  - `analysis/nmse/` — NMSE-based pivot tables, rankings, and rank distributions
+  - `analysis/se/` — spectral efficiency-based pivot tables, rankings, and rank distributions
+- **[`vis/`](z_artifacts/outputs/testing/vis/)** — full visualization suite
 
   | Type | Path | Description |
   |------|------|-------------|
@@ -458,19 +449,10 @@ The [`outputs/testing/`](z_artifacts/outputs/testing/) directory contains the fu
   | | `line/generalization/` | Out-of-distribution performance across mobility scenarios |
   | **Radar plots** | `radar/` | Multi-dimensional ranking comparison (`combined_radar_fdd.pdf`, `combined_radar_tdd.pdf`) with rank summary CSVs |
   | **Violin plots** | `violin/nmse/`, `violin/se/` | Distribution of NMSE and SE across regular, robustness, and generalization scenarios for FDD and TDD |
-  | **Tables** | `table/nmse_cm/`, `table/nmse_ds/` | NMSE performance tables broken down by channel model and delay spread (formatted CSVs + text summaries) |
-  | | `table/se_cm/`, `table/se_ds/` | SE performance tables broken down by channel model and delay spread |
+  | **Tables** | `table/nmse_cm/`, `table/nmse_ds/` | NMSE performance tables by channel model and delay spread (formatted CSVs + text summaries) |
+  | | `table/se_cm/`, `table/se_ds/` | SE performance tables by channel model and delay spread |
 
-### Key Insights from Sample Results
-
-The provided sample outputs demonstrate:
-- **Full Model Coverage**: All 9 models (5 learning-based, 3 statistical, 1 no-prediction baseline) are evaluated.
-- **Comprehensive Evaluation**: Testing covers regular, robustness (burst / package-drop / phase noise), and generalization scenarios across both FDD and TDD.
-- **Multi-Metric Analysis**: Both NMSE and spectral efficiency (SE) metrics are evaluated with per-condition pivot tables and global rankings.
-- **Rich Visualizations**: Line plots, radar charts, violin plots, and performance tables provide complementary perspectives.
-- **End-to-End Pipeline**: From configuration to training logs, tuning studies, raw predictions, consolidated analysis, and publication-ready figures.
-
-**For detailed analysis and interpretation, please refer to the corresponding research paper.**
+**For detailed analysis and interpretation of these results, please refer to the [paper](https://arxiv.org/abs/2510.12996) (also available at [`asset/csi-4cast-Mar-26-2026.pdf`](asset/csi-4cast-Mar-26-2026.pdf)).**
 
 
 ## Citation
