@@ -8,7 +8,7 @@ Copyright 2025 Georgia Institute of Technology
 
 CSI-4CAST is a comprehensive framework for generating and evaluating Channel State Information (CSI) prediction models using 3GPP TR 38.901 channel models. The repository provides tools for large-scale dataset generation, model training, and comprehensive evaluation with support for high-performance computing environments (SLURM-based clusters) and local machines.
 
-This framework is developed as part of our research paper [**CSI-4CAST: A Hybrid Deep Learning Model for CSI Prediction with Comprehensive Robustness and Generalization Testing**](https://arxiv.org/abs/2510.12996). (A BibTeX entry for citation is provided at the end of this page.) The corresponding datasets are publicly available on our [Hugging Face organization](https://huggingface.co/CSI-4CAST).
+This framework is developed as part of our research paper [**CSI-4CAST: A Hybrid Deep Learning Model for CSI Prediction with Comprehensive Robustness and Generalization Testing**](https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=11526994). (A BibTeX entry for citation is provided at the end of this page.) The corresponding datasets are publicly available on our [Hugging Face organization](https://huggingface.co/CSI-4CAST).
 
 ## Updates
 
@@ -473,14 +473,12 @@ The [`z_artifacts/outputs/testing/`](z_artifacts/outputs/testing/) directory con
 If you use this framework in your research, please cite the corresponding paper:
 
 ```bibtex
-@misc{cheng2025csi4casthybriddeeplearning,
-      title={CSI-4CAST: A Hybrid Deep Learning Model for CSI Prediction with Comprehensive Robustness and Generalization Testing}, 
-      author={Sikai Cheng and Reza Zandehshahvar and Haoruo Zhao and Daniel A. Garcia-Ulloa and Alejandro Villena-Rodriguez and Carles Navarro Manchón and Pascal Van Hentenryck},
-      year={2025},
-      eprint={2510.12996},
-      archivePrefix={arXiv},
-      primaryClass={cs.LG},
-      url={https://arxiv.org/abs/2510.12996}, 
+@article{cheng2026csi,
+  title={CSI-4CAST: A Hybrid Deep Learning Model for CSI Prediction with Comprehensive Robustness and Generalization Testing},
+  author={Cheng, Sikai and Zandehshahvar, Reza and Zhao, Haoruo and Garcia-Ulloa, Daniel A and Villena-Rodriguez, Alejandro and Manch{\'o}n, Carles Navarro and Van Hentenryck, Pascal},
+  journal={IEEE Transactions on Machine Learning in Communications and Networking},
+  year={2026},
+  publisher={IEEE}
 }
 ```
 
